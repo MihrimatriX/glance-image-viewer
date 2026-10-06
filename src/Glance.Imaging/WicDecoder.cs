@@ -1,10 +1,18 @@
-using Windows.Graphics.Imaging;
+using System.Runtime.InteropServices;
+using Windows.Win32;
+using Windows.Win32.Graphics.Imaging;
+using Windows.Win32.System.Com.StructuredStorage;
+using Windows.Win32.System.Variant;
 
 namespace Glance.Imaging;
 
 /// <summary>Formats guaranteed on every Windows 10/11 install. WebP/HEIC/AVIF/JXL never come here, even if extensions are installed.</summary>
 public sealed class WicDecoder : IImageDecoder
 {
+    // CLSID_WICImagingFactory2 is free-threaded: one instance for all decode threads.
+    private static readonly IWICImagingFactory Factory =
+        (IWICImagingFactory)Activator.CreateInstance(Type.GetTypeFromCLSID(PInvoke.CLSID_WICImagingFactory2, throwOnError: true)!)!;
+
     public int Priority => 0;
 
     public bool CanDecode(string extension, ReadOnlySpan<byte> h) =>
@@ -17,31 +25,145 @@ public sealed class WicDecoder : IImageDecoder
         || Has(h, 0x49, 0x49, 0xBC)                             // JPEG XR
         || h.StartsWith("DDS "u8);
 
-    private static bool Has(ReadOnlySpan<byte> header, params ReadOnlySpan<byte> magic) => header.StartsWith(magic);
-
-    // ponytail: WinRT BitmapDecoder gets no JPEG DCT-domain downscale (ADR 0002); Phase 1 moves to raw WIC COM
-    // (IWICBitmapSourceTransform) to hit the screen-sized decode budget.
     public async Task<DecodedImage> DecodeAsync(Stream source, DecodeOptions options, CancellationToken ct)
     {
-        // Not disposed on purpose: disposing the wrapper closes `source`, which the router may rewind for fallback.
-        var stream = source.AsRandomAccessStream();
-        var decoder = await BitmapDecoder.CreateAsync(stream).AsTask(ct).ConfigureAwait(false);
-
-        int ow = (int)decoder.OrientedPixelWidth, oh = (int)decoder.OrientedPixelHeight;
-        var scale = Math.Min(1.0, Math.Min(
-            (double)(options.MaxWidth ?? ow) / ow,
-            (double)(options.MaxHeight ?? oh) / oh));
-
-        // BitmapTransform scales in raw (pre-orientation) space; orientation is applied afterwards.
-        uint rw = Math.Max(1, (uint)Math.Round(decoder.PixelWidth * scale));
-        uint rh = Math.Max(1, (uint)Math.Round(decoder.PixelHeight * scale));
-        var transform = new BitmapTransform { ScaledWidth = rw, ScaledHeight = rh, InterpolationMode = BitmapInterpolationMode.Fant };
-
-        var data = await decoder.GetPixelDataAsync(
-            BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, transform,
-            ExifOrientationMode.RespectExifOrientation, ColorManagementMode.ColorManageToSRgb).AsTask(ct).ConfigureAwait(false);
-
-        var swapped = decoder.OrientedPixelWidth != decoder.PixelWidth;
-        return new DecodedImage(data.DetachPixelData(), (int)(swapped ? rh : rw), (int)(swapped ? rw : rh), ow, oh);
+        // WIC reads straight from memory: one copy of the encoded bytes, no IStream adapter. Pinned (POH) for InitializeFromMemory.
+        var data = GC.AllocateUninitializedArray<byte>(checked((int)(source.Length - source.Position)), pinned: true);
+        await source.ReadExactlyAsync(data, ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        return Decode(data, options);
     }
+
+    private static DecodedImage Decode(byte[] data, DecodeOptions options)
+    {
+        List<object> com = [];
+        T Track<T>(T o) where T : class { com.Add(o); return o; }
+        try
+        {
+            Factory.CreateStream(out var stream);
+            Track(stream);
+            stream.InitializeFromMemory(data);   // POH-pinned array: WIC's pointer stays valid after the call
+            var decoder = Track(Factory.CreateDecoderFromStream(stream, Guid.Empty, WICDecodeOptions.WICDecodeMetadataCacheOnDemand));
+            decoder.GetFrame(0, out var frame);
+            Track(frame);
+
+            frame.GetSize(out var w, out var h);
+            var orientation = ReadOrientation(frame);
+            var swapped = orientation >= 5;
+            uint ow = swapped ? h : w, oh = swapped ? w : h;
+            var scale = Math.Min(1.0, Math.Min((options.MaxWidth ?? (double)ow) / ow, (options.MaxHeight ?? (double)oh) / oh));
+
+            // Scaler sits directly on the frame so JPEG can use its DCT-domain downscale (ADR 0005).
+            IWICBitmapSource src = frame;
+            uint sw = Math.Max(1, (uint)Math.Round(w * scale)), sh = Math.Max(1, (uint)Math.Round(h * scale));
+            if (sw != w || sh != h)
+            {
+                Factory.CreateBitmapScaler(out var scaler);
+                scaler.Initialize(src, sw, sh, WICBitmapInterpolationMode.WICBitmapInterpolationModeFant);
+                src = Track(scaler);
+            }
+            if (orientation > 1)
+            {
+                Factory.CreateBitmapFlipRotator(out var rotator);
+                rotator.Initialize(src, ToTransform(orientation));
+                src = Track(rotator);
+            }
+            src = ToSrgb(frame, src, Track);
+
+            Factory.CreateFormatConverter(out var converter);
+            converter.Initialize(src, PInvoke.GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherType.WICBitmapDitherTypeNone, null, 0,
+                WICBitmapPaletteType.WICBitmapPaletteTypeCustom);
+            src = Track(converter);
+
+            src.GetSize(out var dw, out var dh);
+            var pixels = GC.AllocateUninitializedArray<byte>(checked((int)(dw * dh * 4)));
+            src.CopyPixels(null, dw * 4, pixels);
+            return new DecodedImage(pixels, (int)dw, (int)dh, (int)ow, (int)oh);
+        }
+        finally
+        {
+            // Release now rather than at finalization: decoders hold native buffers sized to the image.
+            foreach (var o in com)
+                Marshal.ReleaseComObject(o);
+        }
+    }
+
+    /// <summary>Converts from the first embedded ICC profile to sRGB. Untagged images are already treated as sRGB.</summary>
+    private static IWICBitmapSource ToSrgb(IWICBitmapFrameDecode frame, IWICBitmapSource src, Func<object, object> track)
+    {
+        frame.GetColorContexts(0, null, out var count);
+        if (count == 0)
+            return src;
+
+        var contexts = new IWICColorContext[count];
+        for (var i = 0; i < count; i++)
+        {
+            Factory.CreateColorContext(out contexts[i]);
+            track(contexts[i]);
+        }
+        frame.GetColorContexts(count, contexts, out _);
+
+        var profile = contexts.FirstOrDefault(c => { c.GetType(out var t); return t == WICColorContextType.WICColorContextProfile; });
+        if (profile is null)
+            return src;   // EXIF colour-space tag only: 1 = sRGB; "uncalibrated" is treated as sRGB too.
+
+        Factory.CreateColorContext(out var srgb);
+        track(srgb);
+        srgb.InitializeFromExifColorSpace(1);
+        Factory.CreateColorTransformer(out var transform);
+        track(transform);
+        try
+        {
+            transform.Initialize(src, profile, srgb, PInvoke.GUID_WICPixelFormat32bppBGRA);
+        }
+        catch (COMException)
+        {
+            // Some inputs (indexed, 16-bit gray…) aren't accepted directly: go through 32bpp BGRA first.
+            Factory.CreateFormatConverter(out var bgra);
+            track(bgra);
+            bgra.Initialize(src, PInvoke.GUID_WICPixelFormat32bppBGRA, WICBitmapDitherType.WICBitmapDitherTypeNone, null, 0,
+                WICBitmapPaletteType.WICBitmapPaletteTypeCustom);
+            transform.Initialize(bgra, profile, srgb, PInvoke.GUID_WICPixelFormat32bppBGRA);
+        }
+        return transform;
+    }
+
+    private static ushort ReadOrientation(IWICBitmapFrameDecode frame)
+    {
+        try
+        {
+            frame.GetMetadataQueryReader(out var reader);
+            try
+            {
+                PROPVARIANT value = default;
+                reader.GetMetadataByName("System.Photo.Orientation", ref value);
+                var o = value.Anonymous.Anonymous.vt == VARENUM.VT_UI2 ? value.Anonymous.Anonymous.Anonymous.uiVal : (ushort)1;
+                PInvoke.PropVariantClear(ref value);
+                return o is >= 1 and <= 8 ? o : (ushort)1;
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(reader);
+            }
+        }
+        catch (COMException)
+        {
+            return 1;   // no metadata block or no orientation tag
+        }
+    }
+
+    // EXIF orientation -> WIC transform. WIC flips first, then rotates clockwise (pinned by OrientationTests).
+    private static WICBitmapTransformOptions ToTransform(ushort orientation) => orientation switch
+    {
+        2 => WICBitmapTransformOptions.WICBitmapTransformFlipHorizontal,
+        3 => WICBitmapTransformOptions.WICBitmapTransformRotate180,
+        4 => WICBitmapTransformOptions.WICBitmapTransformFlipVertical,
+        5 => WICBitmapTransformOptions.WICBitmapTransformRotate270 | WICBitmapTransformOptions.WICBitmapTransformFlipHorizontal,
+        6 => WICBitmapTransformOptions.WICBitmapTransformRotate90,
+        7 => WICBitmapTransformOptions.WICBitmapTransformRotate90 | WICBitmapTransformOptions.WICBitmapTransformFlipHorizontal,
+        8 => WICBitmapTransformOptions.WICBitmapTransformRotate270,
+        _ => WICBitmapTransformOptions.WICBitmapTransformRotate0,
+    };
+
+    private static bool Has(ReadOnlySpan<byte> header, params ReadOnlySpan<byte> magic) => header.StartsWith(magic);
 }

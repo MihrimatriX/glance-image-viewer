@@ -21,7 +21,10 @@ public readonly record struct Viewport(double Scale, double OffsetX, double Offs
     /// <summary>Multiplies the scale by <paramref name="factor"/>, keeping the image point under (viewX, viewY) fixed on screen.</summary>
     public Viewport ZoomAt(double factor, double viewX, double viewY)
     {
-        // TODO(human): implement zoom-around-cursor.
-        throw new NotImplementedException();
+        var scale = Math.Clamp(Scale * factor, MinScale, MaxScale);
+        // Image point under the cursor, re-anchored at the same view position with the clamped scale.
+        var imageX = (viewX - OffsetX) / Scale;
+        var imageY = (viewY - OffsetY) / Scale;
+        return new(scale, viewX - imageX * scale, viewY - imageY * scale);
     }
 }

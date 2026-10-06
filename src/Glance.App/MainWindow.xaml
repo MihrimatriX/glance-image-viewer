@@ -4,10 +4,19 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml">
-    <Grid x:Name="Root">
+
+    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" Drop="Root_Drop" PreviewKeyDown="Root_PreviewKeyDown">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
         <canvas:CanvasControl
             x:Name="Canvas"
-            AutomationProperties.Name="Image"
+            x:Uid="ImageCanvas"
+            UseSharedDevice="True"
+            IsTabStop="True"
+            ManipulationMode="Scale,TranslateX,TranslateY"
             CreateResources="Canvas_CreateResources"
             Draw="Canvas_Draw"
             PointerWheelChanged="Canvas_PointerWheelChanged"
@@ -15,11 +24,99 @@
             PointerMoved="Canvas_PointerMoved"
             PointerReleased="Canvas_PointerReleased"
             PointerCaptureLost="Canvas_PointerReleased"
+            ManipulationDelta="Canvas_ManipulationDelta"
             DoubleTapped="Canvas_DoubleTapped" />
-        <TextBlock
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            TextWrapping="Wrap"
-            Text="{x:Bind ViewModel.Error, Mode=OneWay}" />
+
+        <!-- States: none of them is ever blank. -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
+                    Visibility="{x:Bind ViewModel.IsWelcome, Mode=OneWay}">
+            <TextBlock x:Uid="WelcomeText" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
+            <Button x:Uid="OpenButton" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" Click="Open_Click" />
+        </StackPanel>
+        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="480" TextAlignment="Center"
+                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                   Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+        <ProgressRing HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.ShowSpinner, Mode=OneWay}" />
+
+        <!-- Title bar: drag region + file name; fades with the toolbar. -->
+        <Grid x:Name="TitleBar" Grid.ColumnSpan="2" Height="32" VerticalAlignment="Top" Background="Transparent">
+            <Grid.OpacityTransition>
+                <ScalarTransition />
+            </Grid.OpacityTransition>
+            <TextBlock Margin="16,0" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                       Text="{x:Bind TitleText(ViewModel.FileName), Mode=OneWay}" />
+        </Grid>
+
+        <!-- Floating toolbar. -->
+        <Border x:Name="Toolbar" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" Padding="4"
+                CornerRadius="8" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                PointerEntered="Toolbar_PointerEntered" PointerExited="Toolbar_PointerExited">
+            <Border.OpacityTransition>
+                <ScalarTransition />
+            </Border.OpacityTransition>
+            <StackPanel Orientation="Horizontal" Spacing="2">
+                <AppBarButton x:Uid="OpenToolbarButton" Width="44" LabelPosition="Collapsed" Icon="OpenFile" Click="Open_Click" />
+                <AppBarSeparator />
+                <AppBarButton x:Uid="PrevButton" Width="44" LabelPosition="Collapsed" Icon="Back" Click="Prev_Click" />
+                <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                           Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
+                <AppBarButton x:Uid="NextButton" Width="44" LabelPosition="Collapsed" Icon="Forward" Click="Next_Click" />
+                <AppBarSeparator />
+                <AppBarButton x:Uid="ZoomOutButton" Width="44" LabelPosition="Collapsed" Icon="ZoomOut" Click="ZoomOut_Click" />
+                <AppBarButton x:Uid="FitButton" Width="44" LabelPosition="Collapsed" Click="Fit_Click">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton x:Uid="ZoomInButton" Width="44" LabelPosition="Collapsed" Icon="ZoomIn" Click="ZoomIn_Click" />
+                <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
+                <AppBarSeparator />
+                <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
+                <AppBarButton x:Uid="InfoButton" Width="44" LabelPosition="Collapsed" Click="Info_Click">
+                    <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton x:Uid="FullscreenButton" Width="44" LabelPosition="Collapsed" Icon="FullScreen" Click="Fullscreen_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- Undo toast for delete. -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,80" Padding="16,8,8,8" CornerRadius="8"
+                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                Visibility="{x:Bind HasText(ViewModel.UndoMessage), Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.UndoMessage, Mode=OneWay}" />
+                <Button x:Uid="UndoButton" Click="Undo_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- Info panel (EXIF + histogram arrive in Phase 2). -->
+        <ScrollViewer x:Name="InfoPanel" Grid.Column="1" Width="280" Visibility="Collapsed"
+                      Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
+            <StackPanel Padding="16,48,16,16" Spacing="12">
+                <StackPanel>
+                    <TextBlock x:Uid="InfoNameLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.Name, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock x:Uid="InfoFolderLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.Folder, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock x:Uid="InfoDimensionsLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.Dimensions, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock x:Uid="InfoSizeLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.FileSize, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock x:Uid="InfoModifiedLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.Modified, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock x:Uid="InfoFormatLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.Info.Format, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
