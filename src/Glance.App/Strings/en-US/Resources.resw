@@ -33,6 +33,11 @@
   <data name="Onboarding_Body10" xml:space="preserve"><value>Windows asks you to choose this yourself. In Default apps, select the Photo viewer entry and choose Glance.</value></data>
   <data name="Onboarding_Open" xml:space="preserve"><value>Open Default apps</value></data>
   <data name="Onboarding_Later" xml:space="preserve"><value>Not now</value></data>
+  <data name="RecentHeader.Text" xml:space="preserve"><value>Recent</value></data>
+  <data name="FilmStrip.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Images in this folder</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Fit / 100% (0 / 1)</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Zoom level</value></data>
+  <data name="PlayButton.Label" xml:space="preserve"><value>Play / pause (Space)</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Previous (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Next (→)</value></data>
@@ -43,4 +48,5 @@
   <data name="DeleteButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Delete (Del)</value></data>
   <data name="InfoButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Info (I)</value></data>
   <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Full screen (F11)</value></data>
+  <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Play / pause (Space)</value></data>
 </root>

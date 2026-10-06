@@ -12,7 +12,9 @@ public partial class App : Application
 {
     // ponytail: plain DI container, no Generic Host — Host startup cost hurts the cold-start budget (ADR 0001).
     public static IServiceProvider Services { get; } = new ServiceCollection()
-        .AddSingleton<IImageDecoder, WicDecoder>()
+        .AddSingleton<WicDecoder>()
+        .AddSingleton<IImageDecoder>(s => s.GetRequiredService<WicDecoder>())
+        .AddSingleton<IImageDecoder, RawPreviewDecoder>()
         .AddSingleton<IImageDecoder, MagickDecoder>()   // registering doesn't load Magick (ADR 0003)
         .AddSingleton<DecoderRouter>()
         .AddSingleton<ImageLoader>()
@@ -51,13 +53,18 @@ public partial class App : Application
         if (path is not null)
             await ViewModel.OpenAsync(path);
 
-        var settings = Settings.Load();
-        if (!settings.FirstRunDone)
+        // Defaults can only be chosen for a registered (packaged) app; the portable build skips this.
+        if (IsPackaged && !Settings.Load().FirstRunDone)
         {
-            (settings with { FirstRunDone = true }).Save();
-            // Defaults can only be chosen for a registered (packaged) app; the portable build skips this.
-            if (IsPackaged)
+            try
+            {
                 await _window.ShowOnboardingAsync();
+                (Settings.Load() with { FirstRunDone = true }).Save();   // only once it was actually shown
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Onboarding failed", ex);   // never worth crashing the viewer over
+            }
         }
     }
 

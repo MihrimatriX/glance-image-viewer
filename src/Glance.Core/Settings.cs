@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Glance.Core;
 
 /// <summary>All settings are optional; missing or corrupt files fall back to defaults.</summary>
-public sealed record Settings(bool FirstRunDone = false)
+public sealed record Settings(bool FirstRunDone = false, string[]? RecentFiles = null)
 {
     /// <summary>Folder for settings and logs: packaged → ApplicationData.LocalFolder (passed in), portable → %LOCALAPPDATA%\Glance.</summary>
     public static string DataFolder { get; set; } =

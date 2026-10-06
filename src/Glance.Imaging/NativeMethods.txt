@@ -11,3 +11,4 @@ IWICStream
 GUID_WICPixelFormat32bppBGRA
 GUID_WICPixelFormat32bppPBGRA
 PropVariantClear
+GUID_ContainerFormatGif

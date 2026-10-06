@@ -16,14 +16,18 @@ public sealed class WicDecoder : IImageDecoder
     public int Priority => 0;
 
     public bool CanDecode(string extension, ReadOnlySpan<byte> h) =>
-        Has(h, 0xFF, 0xD8, 0xFF)                                // JPEG
-        || Has(h, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A)           // PNG
+        !ImageFormats.Raw.Contains(extension)                   // TIFF-based RAW must reach LibRaw, not WIC's TIFF reader
+        && (Has(h, 0xFF, 0xD8, 0xFF)                            // JPEG
+        || (Has(h, 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A) && !IsApng(h))   // PNG (APNG: WIC only sees the still)
         || h.StartsWith("GIF8"u8)
         || h.StartsWith("BM"u8)
         || h.StartsWith("II*\0"u8) || h.StartsWith("MM\0*"u8)  // TIFF
         || Has(h, 0x00, 0x00, 0x01, 0x00)                       // ICO
         || Has(h, 0x49, 0x49, 0xBC)                             // JPEG XR
-        || h.StartsWith("DDS "u8);
+        || h.StartsWith("DDS "u8));
+
+    // acTL must precede IDAT; right after the 25-byte IHDR chunk it sits at offset 37.
+    private static bool IsApng(ReadOnlySpan<byte> h) => h.Length >= 41 && h[37..41].SequenceEqual("acTL"u8);
 
     public async Task<DecodedImage> DecodeAsync(Stream source, DecodeOptions options, CancellationToken ct)
     {
@@ -34,7 +38,8 @@ public sealed class WicDecoder : IImageDecoder
         return Decode(data, options);
     }
 
-    private static DecodedImage Decode(byte[] data, DecodeOptions options)
+    /// <summary>Decodes an in-memory (POH-pinned) file. <paramref name="orientation"/> overrides EXIF, e.g. for RAW previews.</summary>
+    internal DecodedImage Decode(byte[] data, DecodeOptions options, ushort? orientation = null)
     {
         List<object> com = [];
         T Track<T>(T o) where T : class { com.Add(o); return o; }
@@ -44,12 +49,19 @@ public sealed class WicDecoder : IImageDecoder
             Track(stream);
             stream.InitializeFromMemory(data);   // POH-pinned array: WIC's pointer stays valid after the call
             var decoder = Track(Factory.CreateDecoderFromStream(stream, Guid.Empty, WICDecodeOptions.WICDecodeMetadataCacheOnDemand));
+            decoder.GetFrameCount(out var frameCount);
+            if (frameCount > 1)
+            {
+                decoder.GetContainerFormat(out var container);
+                if (container == PInvoke.GUID_ContainerFormatGif)
+                    throw new NotSupportedException("Animated GIF: frame compositing is left to Magick.");
+            }
             decoder.GetFrame(0, out var frame);
             Track(frame);
 
             frame.GetSize(out var w, out var h);
-            var orientation = ReadOrientation(frame);
-            var swapped = orientation >= 5;
+            orientation ??= ReadOrientation(frame);
+            var swapped = orientation.Value >= 5;
             uint ow = swapped ? h : w, oh = swapped ? w : h;
             var scale = Math.Min(1.0, Math.Min((options.MaxWidth ?? (double)ow) / ow, (options.MaxHeight ?? (double)oh) / oh));
 
@@ -62,10 +74,10 @@ public sealed class WicDecoder : IImageDecoder
                 scaler.Initialize(src, sw, sh, WICBitmapInterpolationMode.WICBitmapInterpolationModeFant);
                 src = Track(scaler);
             }
-            if (orientation > 1)
+            if (orientation.Value > 1)
             {
                 Factory.CreateBitmapFlipRotator(out var rotator);
-                rotator.Initialize(src, ToTransform(orientation));
+                rotator.Initialize(src, ToTransform(orientation.Value));
                 src = Track(rotator);
             }
             src = ToSrgb(frame, src, Track);

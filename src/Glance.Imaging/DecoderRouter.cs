@@ -12,6 +12,7 @@ public sealed class DecoderRouter(IEnumerable<IImageDecoder> decoders)
     {
         var header = new byte[HeaderLength];
         var read = await source.ReadAtLeastAsync(header, HeaderLength, throwOnEndOfStream: false, ct).ConfigureAwait(false);
+        options = options with { Extension = extension };
 
         List<Exception> failures = [];
         foreach (var decoder in _decoders)

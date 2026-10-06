@@ -44,6 +44,9 @@ public sealed class FolderNavigator(Func<string, bool> isSupported) : IDisposabl
         _watcher.EnableRaisingEvents = true;
     }
 
+    /// <summary>Copy of the current list, in display order.</summary>
+    public string[] Snapshot() { lock (_lock) return [.. _files]; }
+
     /// <summary>The file <paramref name="offset"/> steps from the current one, or null past either end. Does not move.</summary>
     public string? Peek(int offset)
     {

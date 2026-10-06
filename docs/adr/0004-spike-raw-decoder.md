@@ -1,6 +1,6 @@
 # ADR 0004 — Spike: RAW decoder choice
 
-Status: **open decision** · 2026-10-06
+Status: superseded by ADR 0005 (option A + own preview scanner) · 2026-10-07
 
 ## Options
 

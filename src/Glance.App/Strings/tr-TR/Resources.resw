@@ -33,6 +33,11 @@
   <data name="Onboarding_Body10" xml:space="preserve"><value>Windows bu seçimi sizin yapmanızı ister. Varsayılan uygulamalar sayfasında Fotoğraf görüntüleyici girişini seçip Glance&apos;i işaretleyin.</value></data>
   <data name="Onboarding_Open" xml:space="preserve"><value>Varsayılan uygulamaları aç</value></data>
   <data name="Onboarding_Later" xml:space="preserve"><value>Şimdi değil</value></data>
+  <data name="RecentHeader.Text" xml:space="preserve"><value>Son açılanlar</value></data>
+  <data name="FilmStrip.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Bu klasördeki görüntüler</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sığdır / %100 (0 / 1)</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Yakınlaştırma düzeyi</value></data>
+  <data name="PlayButton.Label" xml:space="preserve"><value>Oynat / duraklat (Boşluk)</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki (→)</value></data>
@@ -43,4 +48,5 @@
   <data name="DeleteButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sil (Del)</value></data>
   <data name="InfoButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Bilgi (I)</value></data>
   <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Tam ekran (F11)</value></data>
+  <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Oynat / duraklat (Boşluk)</value></data>
 </root>

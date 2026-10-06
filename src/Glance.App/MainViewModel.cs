@@ -32,11 +32,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _loader = loader;
         _router = router;
-        _nav.Changed += (_, _) => _ui.TryEnqueue(UpdatePosition);
+        _nav.Changed += (_, _) => _ui.TryEnqueue(() => { RefreshFilm(); UpdatePosition(); });
         _undoTimer = _ui.CreateTimer();
         _undoTimer.Interval = UndoWindow;
         _undoTimer.IsRepeating = false;
         _undoTimer.Tick += (_, _) => _ = CommitPendingDeleteAsync();
+        LoadRecent();
     }
 
     [ObservableProperty] public partial LoadedImage? Image { get; private set; }
@@ -81,6 +82,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 path = first;
             }
             await Task.Run(() => _nav.Open(path));
+            RefreshFilm();
+            AddRecent(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -95,7 +98,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // Folders without such files never pay its memory (ADR 0003).
     private static Task WarmUpMagickIfNeededAsync(string path) => Task.Run(() =>
     {
-        if (Path.GetDirectoryName(path) is { } dir && Directory.EnumerateFiles(dir).Any(f => ImageFormats.Magick.Contains(Path.GetExtension(f))))
+        if (Path.GetDirectoryName(path) is { } dir && Directory.EnumerateFiles(dir).Any(ImageFormats.IsMagickRouted))
             MagickDecoder.WarmUp();
     });
 
@@ -302,6 +305,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void UpdatePosition()
     {
         var (index, count) = (_nav.Index, _nav.Count);
+        Index = index;
         Position = index >= 0 && count > 0 ? $"{index + 1} / {count}" : null;
     }
 
@@ -355,6 +359,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _loadCts.Dispose();
         _prefetchCts.Dispose();
         _nav.Dispose();
+        _thumbGate.Dispose();
     }
 }
 

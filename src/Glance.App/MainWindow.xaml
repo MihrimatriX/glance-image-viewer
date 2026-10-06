@@ -3,9 +3,10 @@
     x:Class="Glance.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml">
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
+    xmlns:local="using:Glance.App">
 
-    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" Drop="Root_Drop" PreviewKeyDown="Root_PreviewKeyDown">
+    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop" PreviewKeyDown="Root_PreviewKeyDown">
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
             <ColumnDefinition Width="Auto" />
@@ -27,59 +28,130 @@
             ManipulationDelta="Canvas_ManipulationDelta"
             DoubleTapped="Canvas_DoubleTapped" />
 
-        <!-- States: none of them is ever blank. -->
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
-                    Visibility="{x:Bind ViewModel.IsWelcome, Mode=OneWay}">
-            <TextBlock x:Uid="WelcomeText" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
-            <Button x:Uid="OpenButton" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" Click="Open_Click" />
-        </StackPanel>
+        <!-- Welcome: logo, drop zone, recent files. -->
+        <ScrollViewer Visibility="{x:Bind ViewModel.IsWelcome, Mode=OneWay}" VerticalScrollBarVisibility="Auto">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Padding="24,64,24,24" MaxWidth="560">
+                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="14">
+                    <Image Source="ms-appx:///Assets/logo-128.png" Width="48" Height="48" />
+                    <TextBlock Text="Glance" Style="{StaticResource TitleLargeTextBlockStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Grid x:Name="DropZone" Height="220" CornerRadius="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <Rectangle x:Name="DropZoneBorder" RadiusX="12" RadiusY="12" StrokeThickness="2" StrokeDashArray="4,3"
+                               Stroke="{ThemeResource ControlStrokeColorSecondaryBrush}" />
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <FontIcon Glyph="&#xEB9F;" FontSize="40" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="WelcomeText" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                        <Button x:Uid="OpenButton" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" Click="Open_Click" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.HasRecent, Mode=OneWay}">
+                    <TextBlock x:Uid="RecentHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <ListView ItemsSource="{x:Bind ViewModel.Recent}" IsItemClickEnabled="True" SelectionMode="None" ItemClick="Recent_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:RecentItem">
+                                <StackPanel Padding="0,6" AutomationProperties.Name="{x:Bind Name}">
+                                    <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind Folder}" Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
         <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="480" TextAlignment="Center"
                    Style="{StaticResource BodyStrongTextBlockStyle}"
                    Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
         <ProgressRing HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.ShowSpinner, Mode=OneWay}" />
 
-        <!-- Title bar: drag region + file name; fades with the toolbar. -->
+        <!-- Title bar: drag region + icon + file name; fades with the rest of the chrome. -->
         <Grid x:Name="TitleBar" Grid.ColumnSpan="2" Height="32" VerticalAlignment="Top" Background="Transparent">
             <Grid.OpacityTransition>
                 <ScalarTransition />
             </Grid.OpacityTransition>
-            <TextBlock Margin="16,0" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
-                       Text="{x:Bind TitleText(ViewModel.FileName), Mode=OneWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="12,0" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-16.png" Width="16" Height="16" />
+                <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                           Text="{x:Bind TitleText(ViewModel.FileName), Mode=OneWay}" />
+            </StackPanel>
         </Grid>
 
-        <!-- Floating toolbar. -->
-        <Border x:Name="Toolbar" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" Padding="4"
-                CornerRadius="8" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
-                PointerEntered="Toolbar_PointerEntered" PointerExited="Toolbar_PointerExited">
-            <Border.OpacityTransition>
+        <!-- Bottom chrome: filmstrip + toolbar. -->
+        <StackPanel x:Name="BottomChrome" VerticalAlignment="Bottom" Spacing="8" Padding="16,0,16,16"
+                    PointerEntered="Chrome_PointerEntered" PointerExited="Chrome_PointerExited">
+            <StackPanel.OpacityTransition>
                 <ScalarTransition />
-            </Border.OpacityTransition>
-            <StackPanel Orientation="Horizontal" Spacing="2">
-                <AppBarButton x:Uid="OpenToolbarButton" Width="44" LabelPosition="Collapsed" Icon="OpenFile" Click="Open_Click" />
-                <AppBarSeparator />
-                <AppBarButton x:Uid="PrevButton" Width="44" LabelPosition="Collapsed" Icon="Back" Click="Prev_Click" />
-                <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
-                           Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
-                <AppBarButton x:Uid="NextButton" Width="44" LabelPosition="Collapsed" Icon="Forward" Click="Next_Click" />
-                <AppBarSeparator />
-                <AppBarButton x:Uid="ZoomOutButton" Width="44" LabelPosition="Collapsed" Icon="ZoomOut" Click="ZoomOut_Click" />
-                <AppBarButton x:Uid="FitButton" Width="44" LabelPosition="Collapsed" Click="Fit_Click">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Uid="ZoomInButton" Width="44" LabelPosition="Collapsed" Icon="ZoomIn" Click="ZoomIn_Click" />
-                <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
-                <AppBarSeparator />
-                <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
-                <AppBarButton x:Uid="InfoButton" Width="44" LabelPosition="Collapsed" Click="Info_Click">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Uid="FullscreenButton" Width="44" LabelPosition="Collapsed" Icon="FullScreen" Click="Fullscreen_Click" />
-            </StackPanel>
-        </Border>
+            </StackPanel.OpacityTransition>
+
+            <ListView x:Name="FilmStrip" x:Uid="FilmStrip" Height="84" HorizontalAlignment="Center" MaxWidth="1200"
+                      ItemsSource="{x:Bind ViewModel.Film}" SelectedIndex="{x:Bind ViewModel.Index, Mode=OneWay}"
+                      IsItemClickEnabled="True" ItemClick="Film_ItemClick" SelectionMode="Single"
+                      ContainerContentChanging="Film_ContainerContentChanging"
+                      ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                      ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                      CornerRadius="8" Padding="4" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                      Visibility="{x:Bind HasItems(ViewModel.Film.Count), Mode=OneWay}">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="2,0" />
+                        <Setter Property="MinWidth" Value="0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:FilmItem">
+                        <Grid Width="96" Height="64" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                              AutomationProperties.Name="{x:Bind Name}" ToolTipService.ToolTip="{x:Bind Name}">
+                            <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4" CornerRadius="8"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <AppBarButton x:Uid="OpenToolbarButton" Width="44" LabelPosition="Collapsed" Icon="OpenFile" Click="Open_Click" />
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="PrevButton" Width="44" LabelPosition="Collapsed" Icon="Back" Click="Prev_Click" />
+                    <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                               Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
+                    <AppBarButton x:Uid="NextButton" Width="44" LabelPosition="Collapsed" Icon="Forward" Click="Next_Click" />
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="ZoomOutButton" Width="44" LabelPosition="Collapsed" Icon="ZoomOut" Click="ZoomOut_Click" />
+                    <Button x:Name="ZoomText" x:Uid="ZoomPercentButton" MinWidth="64" Padding="6,4" Background="Transparent" BorderThickness="0"
+                            FontSize="12" Click="ZoomText_Click" Content="100%" />
+                    <AppBarButton x:Uid="ZoomInButton" Width="44" LabelPosition="Collapsed" Icon="ZoomIn" Click="ZoomIn_Click" />
+                    <AppBarButton x:Uid="FitButton" Width="44" LabelPosition="Collapsed" Click="Fit_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
+                    <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" Width="44" LabelPosition="Collapsed" Click="Play_Click" Visibility="Collapsed">
+                        <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
+                    <AppBarButton x:Uid="InfoButton" Width="44" LabelPosition="Collapsed" Click="Info_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="FullscreenButton" Width="44" LabelPosition="Collapsed" Icon="FullScreen" Click="Fullscreen_Click" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <!-- Undo toast for delete. -->
-        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,80" Padding="16,8,8,8" CornerRadius="8"
+        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,48,0,0" Padding="16,8,8,8" CornerRadius="8"
                 Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
                 Visibility="{x:Bind HasText(ViewModel.UndoMessage), Mode=OneWay}">
             <StackPanel Orientation="Horizontal" Spacing="12">
@@ -88,7 +160,7 @@
             </StackPanel>
         </Border>
 
-        <!-- Info panel (EXIF + histogram arrive in Phase 2). -->
+        <!-- Info panel (EXIF + histogram arrive with the metadata work). -->
         <ScrollViewer x:Name="InfoPanel" Grid.Column="1" Width="280" Visibility="Collapsed"
                       Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
             <StackPanel Padding="16,48,16,16" Spacing="12">
