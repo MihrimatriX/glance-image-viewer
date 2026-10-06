@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Glance.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml">
+    <Grid x:Name="Root">
+        <canvas:CanvasControl
+            x:Name="Canvas"
+            AutomationProperties.Name="Image"
+            CreateResources="Canvas_CreateResources"
+            Draw="Canvas_Draw"
+            PointerWheelChanged="Canvas_PointerWheelChanged"
+            PointerPressed="Canvas_PointerPressed"
+            PointerMoved="Canvas_PointerMoved"
+            PointerReleased="Canvas_PointerReleased"
+            PointerCaptureLost="Canvas_PointerReleased"
+            DoubleTapped="Canvas_DoubleTapped" />
+        <TextBlock
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            TextWrapping="Wrap"
+            Text="{x:Bind ViewModel.Error, Mode=OneWay}" />
+    </Grid>
+</Window>
