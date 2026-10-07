@@ -72,6 +72,7 @@ public sealed partial class MainWindow : Window
 
     // Slideshow.
     private bool _slideshow, _slideshowEnteredFullscreen;
+    private string? _cropPath;
     private double _kenBurnsStart;
 
     public MainViewModel ViewModel { get; }
@@ -204,7 +205,11 @@ public sealed partial class MainWindow : Window
         }
         _image = image;
         Title = TitleText(ViewModel.FileName);
+        if (_cropMode && !string.Equals(image?.Path, _cropPath, StringComparison.OrdinalIgnoreCase))
+            ToggleCrop();
+        _cropPath = image?.Path;
         UpdatePlayback();
+        UpdateSaveRotationButton();
         Canvas.Invalidate();
         HistogramCanvas.Invalidate();
     }
@@ -267,6 +272,7 @@ public sealed partial class MainWindow : Window
             var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
             DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
             UpdateZoomText();
+            DrawCropOverlay(ds);
 
             // Physical pixels per *bitmap* pixel: past 1:1 the screen-sized decode isn't enough any more.
             if (_view.Scale * image.OriginalWidth / image.Bitmap.SizeInPixels.Width > 1.01 && !image.IsFull && _animStart < 0)
@@ -460,6 +466,7 @@ public sealed partial class MainWindow : Window
     private void Rotate(int quarterTurns)
     {
         _rotation = (_rotation + quarterTurns + 4) % 4;
+        UpdateSaveRotationButton();
         StopMotion();
         _fit = true;
         Canvas.Invalidate();
@@ -580,6 +587,8 @@ public sealed partial class MainWindow : Window
         if (e.Pointer.PointerDeviceType != PointerDeviceType.Mouse)
             return;   // touch/pen go through manipulations
         Canvas.CapturePointer(e.Pointer);
+        if (CropPointerPressed(e.GetCurrentPoint(Canvas).Position))
+            return;
         StopMotion();
         _dragFrom = e.GetCurrentPoint(Canvas).Position;
         _dragTime = Now;
@@ -588,6 +597,8 @@ public sealed partial class MainWindow : Window
 
     private void Canvas_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
+        if (CropPointerMoved(e.GetCurrentPoint(Canvas).Position))
+            return;
         if (_dragFrom is not { } from)
             return;
         var to = e.GetCurrentPoint(Canvas).Position;
@@ -603,6 +614,8 @@ public sealed partial class MainWindow : Window
 
     private void Canvas_PointerReleased(object sender, PointerRoutedEventArgs e)
     {
+        if (CropPointerReleased())
+            return;
         if (_dragFrom is null)
             return;
         _dragFrom = null;
@@ -645,6 +658,8 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Home: await ViewModel.FirstAsync(); break;
             case VirtualKey.End: await ViewModel.LastAsync(); break;
             case VirtualKey.F or VirtualKey.F11 when !ctrl: ToggleFullscreen(); break;
+            case VirtualKey.Escape when _cropMode: ToggleCrop(); break;
+            case VirtualKey.Enter when _cropMode: await ShowSaveAsAsync(); break;
             case VirtualKey.Escape when _slideshow: StopSlideshow(); break;
             case VirtualKey.Escape when AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen: ToggleFullscreen(); break;
             case VirtualKey.Number0 or VirtualKey.NumberPad0: Fit(); break;
@@ -653,7 +668,9 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Subtract or (VirtualKey)189: ZoomAt(0.8, Center); break;    // numpad −, OEM '-'
             case VirtualKey.R when !ctrl: Rotate(shift ? -1 : 1); break;
             case VirtualKey.I when !ctrl: ToggleInfo(); break;
-            case VirtualKey.S when !ctrl: ToggleSlideshow(); break;
+            case VirtualKey.S when ctrl: await ShowSaveAsAsync(); break;
+            case VirtualKey.S: ToggleSlideshow(); break;
+            case VirtualKey.C when !ctrl: ToggleCrop(); break;
             case VirtualKey.B when !ctrl: ToggleAmbient(); break;
             case VirtualKey.F1 or (VirtualKey)191: ToggleShortcuts(); break;   // F1, '?' / '/'
             case VirtualKey.Delete: await ViewModel.DeleteAsync(); break;
@@ -688,6 +705,7 @@ public sealed partial class MainWindow : Window
     [
         ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"),
         ("R  ⇧R", "Sc_Rotate"), ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
+("C", "Sc_Crop"), ("Ctrl+S", "Sc_SaveAs"),
         ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"), ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"),
         ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"), ("?  F1", "Sc_Help"),
     ];

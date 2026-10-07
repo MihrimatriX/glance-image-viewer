@@ -58,6 +58,27 @@
   <data name="InfoLocationLabel.Text" xml:space="preserve"><value>Konum</value></data>
   <data name="OpenMapLink.Content" xml:space="preserve"><value>Haritada aç (tarayıcı)</value></data>
   <data name="HistogramCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Histogram</value></data>
+  <data name="SaveRotationButton.Label" xml:space="preserve"><value>Döndürmeyi kaydet</value></data>
+  <data name="CropButton.Label" xml:space="preserve"><value>Kırp (C)</value></data>
+  <data name="SaveAsButton.Label" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
+  <data name="CropHint.Text" xml:space="preserve"><value>Saklanacak alanı sürükleyerek seçin</value></data>
+  <data name="CropSaveButton.Content" xml:space="preserve"><value>Farklı kaydet… (Enter)</value></data>
+  <data name="CropCancelButton.Content" xml:space="preserve"><value>İptal (Esc)</value></data>
+  <data name="SaveAs_Title" xml:space="preserve"><value>Farklı kaydet</value></data>
+  <data name="SaveAs_Format" xml:space="preserve"><value>Biçim</value></data>
+  <data name="SaveAs_Quality" xml:space="preserve"><value>Kalite</value></data>
+  <data name="SaveAs_Width" xml:space="preserve"><value>Genişlik (px)</value></data>
+  <data name="SaveAs_Height" xml:space="preserve"><value>Yükseklik (px)</value></data>
+  <data name="SaveAs_KeepAspect" xml:space="preserve"><value>En-boy oranını koru</value></data>
+  <data name="SaveAs_Save" xml:space="preserve"><value>Kaydet…</value></data>
+  <data name="SaveAs_Cancel" xml:space="preserve"><value>İptal</value></data>
+  <data name="SaveAs_Suffix" xml:space="preserve"><value>-duzenlendi</value></data>
+  <data name="Notice_Saved" xml:space="preserve"><value>Kaydedildi: {0}</value></data>
+  <data name="Notice_SaveFailed" xml:space="preserve"><value>{0} kaydedilemedi</value></data>
+  <data name="Notice_RotationLossless" xml:space="preserve"><value>Döndürme kaydedildi (kayıpsız)</value></data>
+  <data name="Notice_RotationReencoded" xml:space="preserve"><value>Döndürme kaydedildi — orijinal Geri Dönüşüm Kutusu&apos;nda</value></data>
+  <data name="Sc_Crop" xml:space="preserve"><value>Kırp</value></data>
+  <data name="Sc_SaveAs" xml:space="preserve"><value>Farklı kaydet (biçim, boyut, kalite)</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki (→)</value></data>
@@ -70,4 +91,7 @@
   <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Tam ekran (F11)</value></data>
   <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Oynat / duraklat (Boşluk)</value></data>
   <data name="SlideshowButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Slayt gösterisi (S)</value></data>
+  <data name="SaveRotationButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Döndürmeyi kaydet</value></data>
+  <data name="CropButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Kırp (C)</value></data>
+  <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
 </root>

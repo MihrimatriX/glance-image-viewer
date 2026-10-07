@@ -58,6 +58,27 @@
   <data name="InfoLocationLabel.Text" xml:space="preserve"><value>Location</value></data>
   <data name="OpenMapLink.Content" xml:space="preserve"><value>Open in map (browser)</value></data>
   <data name="HistogramCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Histogram</value></data>
+  <data name="SaveRotationButton.Label" xml:space="preserve"><value>Save rotation</value></data>
+  <data name="CropButton.Label" xml:space="preserve"><value>Crop (C)</value></data>
+  <data name="SaveAsButton.Label" xml:space="preserve"><value>Save as (Ctrl+S)</value></data>
+  <data name="CropHint.Text" xml:space="preserve"><value>Drag to select the area to keep</value></data>
+  <data name="CropSaveButton.Content" xml:space="preserve"><value>Save as… (Enter)</value></data>
+  <data name="CropCancelButton.Content" xml:space="preserve"><value>Cancel (Esc)</value></data>
+  <data name="SaveAs_Title" xml:space="preserve"><value>Save as</value></data>
+  <data name="SaveAs_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="SaveAs_Quality" xml:space="preserve"><value>Quality</value></data>
+  <data name="SaveAs_Width" xml:space="preserve"><value>Width (px)</value></data>
+  <data name="SaveAs_Height" xml:space="preserve"><value>Height (px)</value></data>
+  <data name="SaveAs_KeepAspect" xml:space="preserve"><value>Keep aspect ratio</value></data>
+  <data name="SaveAs_Save" xml:space="preserve"><value>Save…</value></data>
+  <data name="SaveAs_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="SaveAs_Suffix" xml:space="preserve"><value>-edited</value></data>
+  <data name="Notice_Saved" xml:space="preserve"><value>Saved: {0}</value></data>
+  <data name="Notice_SaveFailed" xml:space="preserve"><value>Could not save {0}</value></data>
+  <data name="Notice_RotationLossless" xml:space="preserve"><value>Rotation saved (lossless)</value></data>
+  <data name="Notice_RotationReencoded" xml:space="preserve"><value>Rotation saved — the original is in the Recycle Bin</value></data>
+  <data name="Sc_Crop" xml:space="preserve"><value>Crop</value></data>
+  <data name="Sc_SaveAs" xml:space="preserve"><value>Save as (format, size, quality)</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Previous (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Next (→)</value></data>
@@ -70,4 +91,7 @@
   <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Full screen (F11)</value></data>
   <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Play / pause (Space)</value></data>
   <data name="SlideshowButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Slideshow (S)</value></data>
+  <data name="SaveRotationButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Save rotation</value></data>
+  <data name="CropButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Crop (C)</value></data>
+  <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Save as (Ctrl+S)</value></data>
 </root>
