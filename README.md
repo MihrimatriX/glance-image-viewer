@@ -19,7 +19,7 @@ No telemetry, no network calls.
 
 The packaged app also gives **Explorer thumbnails** for HEIC, AVIF, WebP, JXL, RAW, PSD, EXR and the rest (ADR 0006).
 
-Press **?** in the app for every shortcut; **S** starts a slideshow, **B** toggles the ambient light.
+Press **?** in the app for every shortcut. Highlights: **S** slideshow · **B** ambient light · **I** info panel with histogram and EXIF · **C** crop · **Ctrl+S** save as (format, size, quality) · **K** compare side by side · **L** loupe and colour picker. Rotating a JPEG and saving it is lossless.
 
 ## Install
 

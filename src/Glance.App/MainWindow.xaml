@@ -142,6 +142,12 @@
                     <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
                     <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" Width="44" LabelPosition="Collapsed" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
                     <AppBarButton x:Uid="CropButton" Width="44" LabelPosition="Collapsed" Icon="Crop" Click="Crop_Click" />
+                    <AppBarButton x:Uid="CompareButton" Width="44" LabelPosition="Collapsed" Click="Compare_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="LoupeButton" Width="44" LabelPosition="Collapsed" Click="Loupe_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarButton.Icon>
+                    </AppBarButton>
                     <AppBarButton x:Uid="SaveAsButton" Width="44" LabelPosition="Collapsed" Icon="SaveLocal" Click="SaveAs_Click" />
                     <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" Width="44" LabelPosition="Collapsed" Click="Play_Click" Visibility="Collapsed">
                         <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
@@ -239,6 +245,20 @@
                 </Grid>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Compare mode: file name over each pane. -->
+        <Grid x:Name="CompareLabels" VerticalAlignment="Top" Margin="0,40,0,0" Visibility="Collapsed" IsHitTestVisible="False">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border HorizontalAlignment="Center" Padding="10,4" CornerRadius="6" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}">
+                <TextBlock x:Name="PinnedName" Style="{StaticResource CaptionTextBlockStyle}" />
+            </Border>
+            <Border Grid.Column="1" HorizontalAlignment="Center" Padding="10,4" CornerRadius="6" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}">
+                <TextBlock Text="{x:Bind ViewModel.FileName, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" />
+            </Border>
+        </Grid>
 
         <!-- Crop mode bar. -->
         <Border x:Name="CropBar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,44,0,0" Padding="16,6,6,6" CornerRadius="8"

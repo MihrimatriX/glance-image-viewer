@@ -183,7 +183,7 @@ public sealed partial class MainWindow : Window
     {
         if (image?.Path != _image?.Path)
         {
-            if (_image is not null && image is not null)
+            if (_image is not null && image is not null && !Comparing)
             {
                 _outgoing = (_image, _view, _rotation);
                 _loader.Previous = _image;   // keep it alive while it slides out
@@ -242,7 +242,7 @@ public sealed partial class MainWindow : Window
         var ds = args.DrawingSession;
         var now = Now;
         var again = false;
-        var (vw, vh) = ViewSize;
+        var (vw, vh) = PaneSize;
 
         again |= DrawAmbient(ds, now);
 
@@ -269,10 +269,14 @@ public sealed partial class MainWindow : Window
             var (rw, rh) = RotatedSize(image);
             again |= StepViewport(now, rw, rh, vw, vh);
 
-            var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
-            DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
+            if (!DrawCompare(ds, image))
+            {
+                var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
+                DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
+            }
             UpdateZoomText();
             DrawCropOverlay(ds);
+            DrawLoupe(ds, sender, image);
 
             // Physical pixels per *bitmap* pixel: past 1:1 the screen-sized decode isn't enough any more.
             if (_view.Scale * image.OriginalWidth / image.Bitmap.SizeInPixels.Width > 1.01 && !image.IsFull && _animStart < 0)
@@ -432,10 +436,11 @@ public sealed partial class MainWindow : Window
         StopSlideshow();
         // Successive wheel notches compound on the target, not on wherever the animation currently is.
         var basis = _animStart >= 0 ? _animTo : _view;
+        dip = InPane(dip);
         AnimateTo(basis.ZoomAt(factor, dip.X * DpiScale, dip.Y * DpiScale));
     }
 
-    private Point Center => new(Canvas.ActualWidth / 2, Canvas.ActualHeight / 2);
+    private Point Center => new(PaneWidthDip / 2, Canvas.ActualHeight / 2);
 
     private void Fit()
     {
@@ -445,7 +450,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         var (rw, rh) = RotatedSize(_image);
-        var (vw, vh) = ViewSize;
+        var (vw, vh) = PaneSize;
         AnimateTo(Viewport.Fit(rw, rh, vw, vh), fitAfter: true);
     }
 
@@ -586,6 +591,8 @@ public sealed partial class MainWindow : Window
         StopSlideshow();
         if (e.Pointer.PointerDeviceType != PointerDeviceType.Mouse)
             return;   // touch/pen go through manipulations
+        if (LoupeClicked())
+            return;
         Canvas.CapturePointer(e.Pointer);
         if (CropPointerPressed(e.GetCurrentPoint(Canvas).Position))
             return;
@@ -597,6 +604,7 @@ public sealed partial class MainWindow : Window
 
     private void Canvas_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
+        LoupePointerMoved(e.GetCurrentPoint(Canvas).Position);
         if (CropPointerMoved(e.GetCurrentPoint(Canvas).Position))
             return;
         if (_dragFrom is not { } from)
@@ -670,7 +678,9 @@ public sealed partial class MainWindow : Window
             case VirtualKey.I when !ctrl: ToggleInfo(); break;
             case VirtualKey.S when ctrl: await ShowSaveAsAsync(); break;
             case VirtualKey.S: ToggleSlideshow(); break;
-            case VirtualKey.C when !ctrl: ToggleCrop(); break;
+            case VirtualKey.C when !ctrl && !Comparing: ToggleCrop(); break;
+            case VirtualKey.K when !ctrl: ToggleCompare(); break;
+            case VirtualKey.L when !ctrl: ToggleLoupe(); break;
             case VirtualKey.B when !ctrl: ToggleAmbient(); break;
             case VirtualKey.F1 or (VirtualKey)191: ToggleShortcuts(); break;   // F1, '?' / '/'
             case VirtualKey.Delete: await ViewModel.DeleteAsync(); break;
@@ -705,7 +715,7 @@ public sealed partial class MainWindow : Window
     [
         ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"),
         ("R  ⇧R", "Sc_Rotate"), ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
-("C", "Sc_Crop"), ("Ctrl+S", "Sc_SaveAs"),
+("C", "Sc_Crop"), ("K", "Sc_Compare"), ("L", "Sc_Loupe"), ("Ctrl+S", "Sc_SaveAs"),
         ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"), ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"),
         ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"), ("?  F1", "Sc_Help"),
     ];

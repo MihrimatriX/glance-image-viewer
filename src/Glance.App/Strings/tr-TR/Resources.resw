@@ -79,6 +79,11 @@
   <data name="Notice_RotationReencoded" xml:space="preserve"><value>Döndürme kaydedildi — orijinal Geri Dönüşüm Kutusu&apos;nda</value></data>
   <data name="Sc_Crop" xml:space="preserve"><value>Kırp</value></data>
   <data name="Sc_SaveAs" xml:space="preserve"><value>Farklı kaydet (biçim, boyut, kalite)</value></data>
+  <data name="CompareButton.Label" xml:space="preserve"><value>Yan yana karşılaştır (K)</value></data>
+  <data name="LoupeButton.Label" xml:space="preserve"><value>Büyüteç ve renk seçici (L)</value></data>
+  <data name="Sc_Compare" xml:space="preserve"><value>Karşılaştır: bu görüntüyü sabitle, sağda gez</value></data>
+  <data name="Sc_Loupe" xml:space="preserve"><value>Büyüteç; tıklayınca rengi kopyalar</value></data>
+  <data name="Notice_ColorCopied" xml:space="preserve"><value>{0} kopyalandı</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki (→)</value></data>
@@ -94,4 +99,6 @@
   <data name="SaveRotationButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Döndürmeyi kaydet</value></data>
   <data name="CropButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Kırp (C)</value></data>
   <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
+  <data name="CompareButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Yan yana karşılaştır (K)</value></data>
+  <data name="LoupeButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Büyüteç ve renk seçici (L)</value></data>
 </root>

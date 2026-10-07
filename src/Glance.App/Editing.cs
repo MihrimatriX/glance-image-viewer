@@ -73,6 +73,8 @@ public sealed partial class MainViewModel
         await ShowAsync(path);
     }
 
+    public void Flash(string text) => ShowNotice(text);
+
     private async void ShowNotice(string text)
     {
         _noticeCts?.Cancel();

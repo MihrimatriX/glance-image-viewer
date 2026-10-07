@@ -35,7 +35,7 @@ public sealed class ImageLoader
         _router = router;
         _cache = new(LruCache<(string, bool), LoadedImage>.DefaultBudget(),
             i => i.SizeBytes,
-            i => { if (!ReferenceEquals(i, Current) && !ReferenceEquals(i, Previous)) i.Dispose(); });
+            i => { if (!ReferenceEquals(i, Current) && !ReferenceEquals(i, Previous) && !ReferenceEquals(i, Pinned)) i.Dispose(); });
     }
 
     /// <summary>The image on screen. Never disposed by eviction.</summary>
@@ -43,6 +43,9 @@ public sealed class ImageLoader
 
     /// <summary>The image being cross-faded out. Never disposed by eviction.</summary>
     public LoadedImage? Previous { get; set; }
+
+    /// <summary>The left pane of compare mode. Never disposed by eviction.</summary>
+    public LoadedImage? Pinned { get; set; }
 
     /// <summary>Screen-sized decode target in physical pixels (the monitor, so resizing/fullscreen needs no re-decode).</summary>
     public (int Width, int Height) ScreenSize { get; set; } = (3840, 2160);
