@@ -27,6 +27,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private int _direction;
     private string? _pendingDelete;
     private string? _fullRequested;
+    private bool _loading;
 
     public MainViewModel(ImageLoader loader, DecoderRouter router)
     {
@@ -134,6 +135,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         UpdatePosition();
         if (State != ViewState.Ready)
             State = ViewState.Loading;   // leave Welcome/error screens at once; a ready image stays up until the next one swaps in
+        _loading = true;
         _ = ShowSpinnerLaterAsync(ct);
 
         try
@@ -162,7 +164,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             if (!ct.IsCancellationRequested)
+            {
+                _loading = false;
                 ShowSpinner = false;
+            }
         }
 
         _prefetchCts = new();
@@ -205,7 +210,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             await Task.Delay(SpinnerDelay, ct);
-            ShowSpinner = true;
+            // A fast (cached) load may have finished during the delay: only show the ring if still loading.
+            ShowSpinner = _loading;
         }
         catch (OperationCanceledException)
         {

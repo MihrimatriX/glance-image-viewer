@@ -10,6 +10,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          lfs: true   # corpus/raw sample for the RAW tests
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
