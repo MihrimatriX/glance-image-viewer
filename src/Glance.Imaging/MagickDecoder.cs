@@ -95,8 +95,10 @@ public sealed class MagickDecoder : IImageDecoder
 
     private static DecodedImage ToDecoded(MagickImage image, DecodeOptions options)
     {
+        if (options.Orientation is { } forced)
+            image.Orientation = (OrientationType)forced;
         // WebP/JXL coders keep EXIF but don't set Orientation; HEIC/AVIF coders apply irot/imir and report TopLeft.
-        if (image.Orientation == OrientationType.Undefined && image.GetExifProfile()?.GetValue(ExifTag.Orientation) is { Value: >= 1 and <= 8 } exif)
+        else if (image.Orientation == OrientationType.Undefined && image.GetExifProfile()?.GetValue(ExifTag.Orientation) is { Value: >= 1 and <= 8 } exif)
             image.Orientation = (OrientationType)exif.Value;
 
         // Downscale before orienting/colour-converting so both run on the small image.

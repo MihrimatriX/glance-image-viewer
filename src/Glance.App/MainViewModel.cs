@@ -52,6 +52,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsWelcome => State == ViewState.Welcome;
     public string? CurrentPath => _nav.Current;
 
+    /// <summary>+1 after moving forward, -1 backward, 0 for a fresh open — drives the slide transition.</summary>
+    public int LastDirection => _direction;
+
     partial void OnStateChanged(ViewState value)
     {
         OnPropertyChanged(nameof(IsWelcome));

@@ -17,6 +17,9 @@ public sealed record DecodeOptions(
 {
     /// <summary>File extension, set by the router: the only format hint for magic-less formats (TGA) and TIFF-based RAW.</summary>
     public string Extension { get; init; } = "";
+
+    /// <summary>EXIF orientation (1–8) to apply instead of the file's own, e.g. a RAW preview whose orientation lives in the RAW header.</summary>
+    public ushort? Orientation { get; init; }
 }
 
 /// <summary>One frame of an animation, already composited (coalesced) to full canvas size.</summary>

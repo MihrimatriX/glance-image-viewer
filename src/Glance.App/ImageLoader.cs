@@ -8,9 +8,6 @@ namespace Glance.App;
 /// <summary>A decoded image already on the GPU. Bitmap is at 96 DPI (1 DIP = 1 bitmap pixel).</summary>
 public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalWidth, int OriginalHeight, bool IsFull)
 {
-    /// <summary>Any pixel not fully opaque: only then is the transparency checkerboard drawn.</summary>
-    public bool HasAlpha { get; init; }
-
     /// <summary>Animation frames (first == <see cref="Bitmap"/>), or null for stills.</summary>
     public IReadOnlyList<(CanvasBitmap Bitmap, TimeSpan Delay)>? Frames { get; init; }
 
@@ -72,7 +69,7 @@ public sealed class ImageLoader
                 // A RAW preview is never "full": zooming past it must trigger the real demosaic.
                 full || (!ImageFormats.Raw.Contains(System.IO.Path.GetExtension(path))
                          && decoded.Width == decoded.OriginalWidth && decoded.Height == decoded.OriginalHeight))
-            { Frames = frames, HasAlpha = HasAlpha(decoded.Pixels) };
+            { Frames = frames };
         }, ct);
 
         _cache.Add((path, image.IsFull), image);
@@ -81,15 +78,6 @@ public sealed class ImageLoader
 
     /// <summary>Largest side the GPU accepts for one bitmap; beyond it only screen-sized decode works until tiling (Phase 2).</summary>
     public static int MaxBitmapSize => Device.MaximumBitmapSizeInPixels;
-
-    private static bool HasAlpha(byte[] bgra)
-    {
-        // Alpha is the top byte of each little-endian BGRA uint.
-        foreach (var px in System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(bgra))
-            if (px < 0xFF000000)
-                return true;
-        return false;
-    }
 
     public void Forget(string path)
     {

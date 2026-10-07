@@ -10,6 +10,7 @@ Components **shipped** with Glance.
 | CommunityToolkit.Mvvm | 8.4.2 | MIT | https://github.com/CommunityToolkit/dotnet |
 | Microsoft.Extensions.DependencyInjection | 10.0.12 | MIT | https://github.com/dotnet/runtime |
 | Magick.NET-Q16-HDRI-AnyCPU | 14.17.2 | Apache-2.0 | https://github.com/dlemstra/Magick.NET |
+| .NET runtime (self-contained) | 10.0.12 | MIT | https://github.com/dotnet/runtime |
 
 Magick.NET's native library bundles, among others (licences per upstream; verify versions against the
 Magick.NET release notes before each release):

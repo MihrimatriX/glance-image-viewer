@@ -4,9 +4,11 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap">
+  xmlns:desktop2="http://schemas.microsoft.com/appx/manifest/desktop/windows10/2"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap rescap desktop2 com">
 
-  <Identity Name="Glance.ImageViewer" Publisher="CN=Glance Dev" Version="0.1.0.0" />
+  <Identity Name="Glance.ImageViewer" Publisher="CN=Glance Dev" Version="0.1.1.0" />
 
   <Properties>
     <DisplayName>Glance</DisplayName>
@@ -121,6 +123,7 @@
               <uap:FileType>.heif</uap:FileType>
               <uap:FileType>.hif</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -130,6 +133,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.avif</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -139,6 +143,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.webp</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -148,6 +153,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.jxl</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -158,6 +164,7 @@
               <uap:FileType>.psd</uap:FileType>
               <uap:FileType>.psb</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -167,6 +174,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.tga</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -177,6 +185,7 @@
               <uap:FileType>.exr</uap:FileType>
               <uap:FileType>.hdr</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -186,6 +195,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.qoi</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -196,6 +206,7 @@
               <uap:FileType>.svg</uap:FileType>
               <uap:FileType>.svgz</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -205,6 +216,7 @@
             <uap:SupportedFileTypes>
               <uap:FileType>.pcx</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -217,6 +229,7 @@
               <uap:FileType>.pbm</uap:FileType>
               <uap:FileType>.pnm</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -227,6 +240,7 @@
               <uap:FileType>.jp2</uap:FileType>
               <uap:FileType>.j2k</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.fileTypeAssociation">
@@ -263,8 +277,17 @@
               <uap:FileType>.srw</uap:FileType>
               <uap:FileType>.x3f</uap:FileType>
             </uap:SupportedFileTypes>
+            <desktop2:ThumbnailHandler Clsid="fa45545e-4edc-4912-90ad-24efae6273d0" />
           </uap:FileTypeAssociation>
         </uap:Extension>
+        <!-- Explorer thumbnails for formats Windows can't thumbnail without codec extensions (src/Glance.Thumbnails). -->
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Glance thumbnails">
+              <com:Class Id="fa45545e-4edc-4912-90ad-24efae6273d0" Path="Glance.Thumbnails.dll" ThreadingModel="Both" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
       </Extensions>
     </Application>
   </Applications>

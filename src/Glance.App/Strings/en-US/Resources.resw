@@ -38,6 +38,22 @@
   <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Fit / 100% (0 / 1)</value></data>
   <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Zoom level</value></data>
   <data name="PlayButton.Label" xml:space="preserve"><value>Play / pause (Space)</value></data>
+  <data name="SlideshowButton.Label" xml:space="preserve"><value>Slideshow (S)</value></data>
+  <data name="ShortcutsTitle.Text" xml:space="preserve"><value>Keyboard shortcuts</value></data>
+  <data name="Sc_Navigate" xml:space="preserve"><value>Previous / next image</value></data>
+  <data name="Sc_FirstLast" xml:space="preserve"><value>First / last in folder</value></data>
+  <data name="Sc_Zoom" xml:space="preserve"><value>Zoom out / in (or mouse wheel)</value></data>
+  <data name="Sc_FitActual" xml:space="preserve"><value>Fit to window / actual size</value></data>
+  <data name="Sc_Rotate" xml:space="preserve"><value>Rotate right / left</value></data>
+  <data name="Sc_Fullscreen" xml:space="preserve"><value>Full screen (Esc to leave)</value></data>
+  <data name="Sc_Slideshow" xml:space="preserve"><value>Slideshow</value></data>
+  <data name="Sc_Ambient" xml:space="preserve"><value>Ambient light on / off</value></data>
+  <data name="Sc_Info" xml:space="preserve"><value>Info panel</value></data>
+  <data name="Sc_Animation" xml:space="preserve"><value>Play / pause, previous / next frame</value></data>
+  <data name="Sc_Delete" xml:space="preserve"><value>Move to Recycle Bin / undo</value></data>
+  <data name="Sc_Copy" xml:space="preserve"><value>Copy image / copy path</value></data>
+  <data name="Sc_OpenReveal" xml:space="preserve"><value>Open / show in Explorer</value></data>
+  <data name="Sc_Help" xml:space="preserve"><value>This list</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Previous (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Next (→)</value></data>
@@ -49,4 +65,5 @@
   <data name="InfoButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Info (I)</value></data>
   <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Full screen (F11)</value></data>
   <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Play / pause (Space)</value></data>
+  <data name="SlideshowButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Slideshow (S)</value></data>
 </root>

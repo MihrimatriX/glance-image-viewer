@@ -17,6 +17,10 @@ No telemetry, no network calls.
 | Camera RAW | CR2, CR3, NEF, ARW, DNG, RAF, ORF, RW2, PEF, … — embedded preview instantly, full demosaic on zoom |
 | Animation | GIF, animated WebP (play/pause: Space, step: , .) |
 
+The packaged app also gives **Explorer thumbnails** for HEIC, AVIF, WebP, JXL, RAW, PSD, EXR and the rest (ADR 0006).
+
+Press **?** in the app for every shortcut; **S** starts a slideshow, **B** toggles the ambient light.
+
 ## Build
 
 Requires the .NET 10 SDK on Windows.
@@ -27,7 +31,7 @@ dotnet test --solution Glance.slnx
 src/Glance.App/bin/Debug/net10.0-windows10.0.19041.0/win-x64/Glance.exe <image>
 ```
 
-Packaged (file associations, "Default apps") — needs Developer Mode:
+Packaged (file associations, "Default apps", Explorer thumbnails) — needs Developer Mode, and the MSVC linker for the NativeAOT thumbnail DLL:
 
 ```
 dotnet build src/Glance.App -c Release -p:WindowsPackageType=MSIX -p:OutDir=%CD%\artifacts\package\

@@ -5,7 +5,7 @@ using Glance.Core;
 using Glance.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graphics.Canvas;
-using Microsoft.Graphics.Canvas.Brushes;
+using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI;
@@ -29,32 +29,50 @@ namespace Glance.App;
 public sealed partial class MainWindow : Window
 {
     private static readonly TimeSpan ChromeTimeout = TimeSpan.FromSeconds(1.5);
-    private const double FadeMs = 150, ZoomMs = 160;
+    private static readonly TimeSpan SlideInterval = TimeSpan.FromSeconds(4);
+    private const double FadeMs = 220, ZoomMs = 160, AmbientFadeMs = 450;
+    private const double SlideFraction = 0.06;    // navigation slide distance, as a fraction of the view width
+    private const double KenBurnsZoom = 0.06;     // slideshow drifts 6% closer over one slide
+    private const double InertiaTauMs = 325;      // pan momentum decay (iOS-like feel)
 
     private readonly ImageLoader _loader = App.Services.GetRequiredService<ImageLoader>();
-    private readonly DispatcherQueueTimer _chromeTimer, _frameTimer;
+    private readonly DispatcherQueueTimer _chromeTimer, _frameTimer, _slideTimer;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     private LoadedImage? _image;
     private Viewport _view;
     private bool _fit = true;
     private int _rotation;            // quarter turns clockwise (view only, file untouched)
-    private Point? _dragFrom;
     private bool _pointerOverChrome, _cursorHidden;
-    private CanvasImageBrush? _checker;
 
     // Zoom animation: from -> to over ZoomMs, started at _animStart (ms on _clock; < 0 = idle).
     private Viewport _animFrom, _animTo;
     private double _animStart = -1;
     private bool _fitAfterAnim;
 
-    // Cross-fade: the outgoing image keeps its own viewport while it fades.
+    // Navigation transition: the outgoing image slides/fades out with its own viewport.
     private (LoadedImage Image, Viewport View, int Rotation)? _outgoing;
     private double _fadeStart;
+    private int _slideDirection;
+
+    // Ambient light: tiny blurred copies of the current (and previous) image, stretched behind everything.
+    private bool _ambientOn = true;
+    private CanvasRenderTarget? _ambient, _ambientOut;
+    private double _ambientStart;
+
+    // Mouse drag + momentum (physical px per ms).
+    private Point? _dragFrom;
+    private double _dragTime;
+    private Vector2 _velocity;
+    private double _inertiaLast = -1;
 
     // Animation playback.
     private int _frame;
     private bool _playing = true;
+
+    // Slideshow.
+    private bool _slideshow, _slideshowEnteredFullscreen;
+    private double _kenBurnsStart;
 
     public MainViewModel ViewModel { get; }
 
@@ -93,8 +111,11 @@ public sealed partial class MainWindow : Window
         _chromeTimer.Tick += (_, _) => HideChrome();
         _frameTimer = DispatcherQueue.CreateTimer();
         _frameTimer.Tick += (_, _) => NextFrame();
+        _slideTimer = DispatcherQueue.CreateTimer();
+        _slideTimer.Interval = SlideInterval;
+        _slideTimer.Tick += async (_, _) => await NextSlideAsync();
         Root.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, _) => ShowChrome()), handledEventsToo: true);
-        Root.ActualThemeChanged += (_, _) => { _checker = null; Canvas.Invalidate(); };
+        Root.ActualThemeChanged += (_, _) => Canvas.Invalidate();
 
         Closed += async (_, _) =>
         {
@@ -118,13 +139,17 @@ public sealed partial class MainWindow : Window
             if (_image is not null && image is not null)
             {
                 _outgoing = (_image, _view, _rotation);
-                _loader.Previous = _image;   // keep it alive while it fades out
+                _loader.Previous = _image;   // keep it alive while it slides out
                 _fadeStart = Now;
+                _slideDirection = ViewModel.LastDirection;
             }
             _fit = true;
             _rotation = 0;
             _animStart = -1;
+            _inertiaLast = -1;
             _frame = 0;
+            _kenBurnsStart = Now;
+            SwapAmbient(image);
         }
         else if (image is not null && _image is not null && image.OriginalWidth != _image.OriginalWidth)
         {
@@ -149,11 +174,15 @@ public sealed partial class MainWindow : Window
     private CanvasBitmap CurrentBitmap(LoadedImage image) =>
         image.Frames is { Count: > 0 } frames ? frames[_frame % frames.Count].Bitmap : image.Bitmap;
 
+    private static double EaseOut(double t) => 1 - Math.Pow(1 - Math.Clamp(t, 0, 1), 3);
+
     private void Canvas_CreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
     {
-        _checker = null;
-        if (args.Reason == CanvasCreateResourcesReason.NewDevice && _image is not null)
-            ViewModel.Reload();   // device lost: every cached bitmap is gone with it
+        if (args.Reason != CanvasCreateResourcesReason.NewDevice)
+            return;
+        _ambient = _ambientOut = null;   // device lost: every GPU resource went with it
+        if (_image is not null)
+            ViewModel.Reload();
     }
 
     private void Canvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -161,11 +190,15 @@ public sealed partial class MainWindow : Window
         var ds = args.DrawingSession;
         var now = Now;
         var again = false;
+        var (vw, vh) = ViewSize;
 
-        var fadeIn = 1.0;
+        again |= DrawAmbient(ds, now);
+
+        // Navigation transition: outgoing slides away from the direction of travel, incoming slides in.
+        var t = _outgoing is null ? 1 : (now - _fadeStart) / FadeMs;
+        var slide = SlideFraction * vw * _slideDirection;
         if (_outgoing is { } outgoing)
         {
-            var t = (now - _fadeStart) / FadeMs;
             if (t >= 1)
             {
                 _outgoing = null;
@@ -173,8 +206,8 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                DrawImage(ds, outgoing.Image, outgoing.Image.Bitmap, outgoing.View, outgoing.Rotation, (float)(1 - t));
-                fadeIn = t;
+                var away = outgoing.View.Pan(-slide * EaseOut(t), 0);
+                DrawImage(ds, outgoing.Image, outgoing.Image.Bitmap, away, outgoing.Rotation, (float)(1 - EaseOut(t)));
                 again = true;
             }
         }
@@ -182,25 +215,10 @@ public sealed partial class MainWindow : Window
         if (_image is { } image)
         {
             var (rw, rh) = RotatedSize(image);
-            var (vw, vh) = ViewSize;
-            if (_animStart >= 0)
-            {
-                var t = Math.Clamp((now - _animStart) / ZoomMs, 0, 1);
-                _view = Lerp(_animFrom, _animTo, 1 - Math.Pow(1 - t, 3));   // ease-out cubic
-                if (t >= 1)
-                {
-                    _animStart = -1;
-                    _fit = _fitAfterAnim;
-                }
-                else
-                    again = true;
-            }
-            else if (_fit)
-                _view = Viewport.Fit(rw, rh, vw, vh);
+            again |= StepViewport(now, rw, rh, vw, vh);
 
-            if (image.HasAlpha)
-                DrawChecker(ds, sender, image, (float)fadeIn);
-            DrawImage(ds, image, CurrentBitmap(image), _view, _rotation, (float)fadeIn);
+            var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
+            DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
             UpdateZoomText();
 
             // Physical pixels per *bitmap* pixel: past 1:1 the screen-sized decode isn't enough any more.
@@ -210,6 +228,42 @@ public sealed partial class MainWindow : Window
 
         if (again)
             sender.Invalidate();
+    }
+
+    /// <summary>Advances zoom animation, momentum and slideshow drift. Returns true while something is still moving.</summary>
+    private bool StepViewport(double now, double rw, double rh, double vw, double vh)
+    {
+        if (_animStart >= 0)
+        {
+            var t = Math.Clamp((now - _animStart) / ZoomMs, 0, 1);
+            _view = Lerp(_animFrom, _animTo, EaseOut(t));
+            if (t < 1)
+                return true;
+            _animStart = -1;
+            _fit = _fitAfterAnim;
+            return false;
+        }
+        if (_inertiaLast >= 0)
+        {
+            var dt = now - _inertiaLast;
+            _inertiaLast = now;
+            _view = _view.Pan(_velocity.X * dt, _velocity.Y * dt);
+            _velocity *= (float)Math.Exp(-dt / InertiaTauMs);
+            if (_velocity.Length() > 0.02f)
+                return true;
+            _inertiaLast = -1;
+            return false;
+        }
+        if (!_fit)
+            return false;
+
+        _view = Viewport.Fit(rw, rh, vw, vh);
+        if (!_slideshow)
+            return false;
+        // Ken Burns: a slow, steady push-in around the centre for the length of the slide.
+        var drift = 1 + KenBurnsZoom * Math.Clamp((now - _kenBurnsStart) / SlideInterval.TotalMilliseconds, 0, 1);
+        _view = _view.ZoomAt(drift, vw / 2, vh / 2);
+        return true;
     }
 
     private Matrix3x2 ImageTransform(LoadedImage image, Viewport view, int rotation)
@@ -240,33 +294,51 @@ public sealed partial class MainWindow : Window
         ds.Transform = Matrix3x2.Identity;
     }
 
-    /// <summary>Screen-space checkerboard under the image's footprint, so transparency is visible.</summary>
-    private void DrawChecker(CanvasDrawingSession ds, ICanvasResourceCreatorWithDpi device, LoadedImage image, float opacity)
+    // ---------- Ambient light ----------
+
+    private void SwapAmbient(LoadedImage? image)
     {
-        if (_checker is null)
-        {
-            var dark = Root.ActualTheme == ElementTheme.Dark;
-            var light = dark ? Windows.UI.Color.FromArgb(255, 0x3A, 0x3A, 0x3A) : Colors.White;
-            var alt = dark ? Windows.UI.Color.FromArgb(255, 0x2C, 0x2C, 0x2C) : Windows.UI.Color.FromArgb(255, 0xE6, 0xE6, 0xE6);
-            var tile = new CanvasRenderTarget(device, 16, 16, 96);
-            using (var t = tile.CreateDrawingSession())
-            {
-                t.Clear(light);
-                t.FillRectangle(0, 0, 8, 8, alt);
-                t.FillRectangle(8, 8, 8, 8, alt);
-            }
-            _checker = new CanvasImageBrush(device, tile)
-            {
-                ExtendX = CanvasEdgeBehavior.Wrap,
-                ExtendY = CanvasEdgeBehavior.Wrap,
-                Interpolation = CanvasImageInterpolation.NearestNeighbor,
-            };
-        }
-        var m = ImageTransform(image, _view, _rotation);
-        var a = Vector2.Transform(Vector2.Zero, m);
-        var b = Vector2.Transform(new Vector2(image.OriginalWidth, image.OriginalHeight), m);
-        _checker.Opacity = opacity;
-        ds.FillRectangle(new Rect(new Point(a.X, a.Y), new Point(b.X, b.Y)), _checker);
+        _ambientOut?.Dispose();
+        _ambientOut = _ambient;
+        _ambient = image is null ? null : MakeAmbient(image.Bitmap);
+        _ambientStart = Now;
+    }
+
+    /// <summary>48×48 blurred thumbnail: stretched to the window it reads as soft light, at almost no cost per frame.</summary>
+    private static CanvasRenderTarget MakeAmbient(CanvasBitmap source)
+    {
+        var device = ImageLoader.Device;
+        using var small = new CanvasRenderTarget(device, 48, 48, 96);
+        using (var s = small.CreateDrawingSession())
+            s.DrawImage(source, new Rect(0, 0, 48, 48), source.Bounds, 1, CanvasImageInterpolation.HighQualityCubic);
+        var blurred = new CanvasRenderTarget(device, 48, 48, 96);
+        using (var s = blurred.CreateDrawingSession())
+        using (var blur = new GaussianBlurEffect { Source = small, BlurAmount = 5, BorderMode = EffectBorderMode.Hard })
+            s.DrawImage(blur);
+        return blurred;
+    }
+
+    private bool DrawAmbient(CanvasDrawingSession ds, double now)
+    {
+        if (!_ambientOn || (_ambient is null && _ambientOut is null))
+            return false;
+        var full = new Rect(0, 0, Canvas.ActualWidth, Canvas.ActualHeight);
+        var t = Math.Clamp((now - _ambientStart) / AmbientFadeMs, 0, 1);
+        const float strength = 0.55f;
+        if (_ambientOut is not null && t < 1)
+            ds.DrawImage(_ambientOut, full, _ambientOut.Bounds, strength * (float)(1 - t), CanvasImageInterpolation.Linear);
+        if (_ambient is not null)
+            ds.DrawImage(_ambient, full, _ambient.Bounds, strength * (float)t, CanvasImageInterpolation.Linear);
+        // A theme-coloured veil keeps the photo itself the brightest thing on screen.
+        var dark = Root.ActualTheme == ElementTheme.Dark;
+        ds.FillRectangle(full, dark ? Windows.UI.Color.FromArgb(90, 0, 0, 0) : Windows.UI.Color.FromArgb(90, 255, 255, 255));
+        return t < 1;
+    }
+
+    private void ToggleAmbient()
+    {
+        _ambientOn = !_ambientOn;
+        Canvas.Invalidate();
     }
 
     private static Viewport Lerp(Viewport a, Viewport b, double t) => new(
@@ -285,6 +357,7 @@ public sealed partial class MainWindow : Window
 
     private void AnimateTo(Viewport target, bool fitAfter = false)
     {
+        _inertiaLast = -1;
         _animFrom = _view;
         _animTo = target;
         _animStart = Now;
@@ -293,12 +366,17 @@ public sealed partial class MainWindow : Window
         Canvas.Invalidate();
     }
 
-    private void StopAnimation() => _animStart = -1;
+    private void StopMotion()
+    {
+        _animStart = -1;
+        _inertiaLast = -1;
+    }
 
     private void ZoomAt(double factor, Point dip)
     {
         if (_image is null)
             return;
+        StopSlideshow();
         // Successive wheel notches compound on the target, not on wherever the animation currently is.
         var basis = _animStart >= 0 ? _animTo : _view;
         AnimateTo(basis.ZoomAt(factor, dip.X * DpiScale, dip.Y * DpiScale));
@@ -335,7 +413,7 @@ public sealed partial class MainWindow : Window
     private void Rotate(int quarterTurns)
     {
         _rotation = (_rotation + quarterTurns + 4) % 4;
-        StopAnimation();
+        StopMotion();
         _fit = true;
         Canvas.Invalidate();
     }
@@ -344,10 +422,52 @@ public sealed partial class MainWindow : Window
     {
         if (_image is null)
             return;
-        StopAnimation();
+        StopMotion();
+        StopSlideshow();
         _view = _view.Pan(dxPhysical, dyPhysical);
         _fit = false;
         Canvas.Invalidate();
+    }
+
+    // ---------- Slideshow ----------
+
+    private void ToggleSlideshow()
+    {
+        if (_slideshow)
+        {
+            StopSlideshow();
+            return;
+        }
+        if (_image is null)
+            return;
+        _slideshow = true;
+        _slideshowEnteredFullscreen = AppWindow.Presenter.Kind != AppWindowPresenterKind.FullScreen;
+        if (_slideshowEnteredFullscreen)
+            AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+        StopMotion();
+        _fit = true;
+        _kenBurnsStart = Now;
+        _slideTimer.Start();
+        HideChrome();
+        Canvas.Invalidate();
+    }
+
+    private void StopSlideshow()
+    {
+        if (!_slideshow)
+            return;
+        _slideshow = false;
+        _slideTimer.Stop();
+        if (_slideshowEnteredFullscreen && AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen)
+            AppWindow.SetPresenter(AppWindowPresenterKind.Default);
+    }
+
+    private async Task NextSlideAsync()
+    {
+        if (ViewModel.Index >= ViewModel.Film.Count - 1)
+            await ViewModel.FirstAsync();   // loop
+        else
+            await ViewModel.NextAsync();
     }
 
     // ---------- Animation playback ----------
@@ -409,10 +529,14 @@ public sealed partial class MainWindow : Window
     private void Canvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         Canvas.Focus(FocusState.Pointer);
+        StopSlideshow();
         if (e.Pointer.PointerDeviceType != PointerDeviceType.Mouse)
             return;   // touch/pen go through manipulations
         Canvas.CapturePointer(e.Pointer);
+        StopMotion();
         _dragFrom = e.GetCurrentPoint(Canvas).Position;
+        _dragTime = Now;
+        _velocity = Vector2.Zero;
     }
 
     private void Canvas_PointerMoved(object sender, PointerRoutedEventArgs e)
@@ -420,17 +544,34 @@ public sealed partial class MainWindow : Window
         if (_dragFrom is not { } from)
             return;
         var to = e.GetCurrentPoint(Canvas).Position;
-        Pan((to.X - from.X) * DpiScale, (to.Y - from.Y) * DpiScale);
+        var (dx, dy) = ((to.X - from.X) * DpiScale, (to.Y - from.Y) * DpiScale);
+        var now = Now;
+        var dt = Math.Max(1, now - _dragTime);
+        // Smoothed release velocity: recent movement dominates.
+        _velocity = Vector2.Lerp(_velocity, new Vector2((float)(dx / dt), (float)(dy / dt)), 0.6f);
+        _dragTime = now;
+        Pan(dx, dy);
         _dragFrom = to;
     }
 
-    private void Canvas_PointerReleased(object sender, PointerRoutedEventArgs e) => _dragFrom = null;
+    private void Canvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_dragFrom is null)
+            return;
+        _dragFrom = null;
+        // Only a flick (recent, fast movement) carries on; a drag that stopped before release stays put.
+        if (Now - _dragTime < 50 && _velocity.Length() > 0.3f)
+        {
+            _inertiaLast = Now;
+            Canvas.Invalidate();
+        }
+    }
 
     private void Canvas_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
     {
         if (e.PointerDeviceType == PointerDeviceType.Mouse || _image is null)
             return;
-        StopAnimation();
+        StopMotion();
         _view = _view.Pan(e.Delta.Translation.X * DpiScale, e.Delta.Translation.Y * DpiScale)
                      .ZoomAt(e.Delta.Scale, e.Position.X * DpiScale, e.Position.Y * DpiScale);
         _fit = false;
@@ -443,14 +584,21 @@ public sealed partial class MainWindow : Window
     {
         var ctrl = IsDown(VirtualKey.Control);
         var shift = IsDown(VirtualKey.Shift);
+        if (Shortcuts.Visibility == Visibility.Visible && e.Key is not (VirtualKey.F1 or (VirtualKey)191))
+        {
+            Shortcuts.Visibility = Visibility.Collapsed;   // any key closes the cheat sheet
+            e.Handled = true;
+            return;
+        }
         e.Handled = true;
         switch (e.Key)
         {
-            case VirtualKey.Left or VirtualKey.PageUp: await ViewModel.PreviousAsync(); break;
+            case VirtualKey.Left or VirtualKey.PageUp: StopSlideshow(); await ViewModel.PreviousAsync(); break;
             case VirtualKey.Right or VirtualKey.PageDown: await ViewModel.NextAsync(); break;
             case VirtualKey.Home: await ViewModel.FirstAsync(); break;
             case VirtualKey.End: await ViewModel.LastAsync(); break;
             case VirtualKey.F or VirtualKey.F11 when !ctrl: ToggleFullscreen(); break;
+            case VirtualKey.Escape when _slideshow: StopSlideshow(); break;
             case VirtualKey.Escape when AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen: ToggleFullscreen(); break;
             case VirtualKey.Number0 or VirtualKey.NumberPad0: Fit(); break;
             case VirtualKey.Number1 or VirtualKey.NumberPad1: ActualSize(Center); break;
@@ -458,6 +606,9 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Subtract or (VirtualKey)189: ZoomAt(0.8, Center); break;    // numpad −, OEM '-'
             case VirtualKey.R when !ctrl: Rotate(shift ? -1 : 1); break;
             case VirtualKey.I when !ctrl: ToggleInfo(); break;
+            case VirtualKey.S when !ctrl: ToggleSlideshow(); break;
+            case VirtualKey.B when !ctrl: ToggleAmbient(); break;
+            case VirtualKey.F1 or (VirtualKey)191: ToggleShortcuts(); break;   // F1, '?' / '/'
             case VirtualKey.Delete: await ViewModel.DeleteAsync(); break;
             case VirtualKey.Z when ctrl: await ViewModel.UndoDeleteAsync(); break;
             case VirtualKey.C when ctrl && shift: ViewModel.CopyPath(); break;
@@ -483,6 +634,42 @@ public sealed partial class MainWindow : Window
     private void ToggleInfo() =>
         InfoPanel.Visibility = InfoPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
+    private static readonly (string Keys, string Resource)[] ShortcutList =
+    [
+        ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"),
+        ("R  ⇧R", "Sc_Rotate"), ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
+        ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"), ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"),
+        ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"), ("?  F1", "Sc_Help"),
+    ];
+
+    private void ToggleShortcuts()
+    {
+        if (ShortcutGrid.Children.Count == 0)
+        {
+            foreach (var (keys, resource) in ShortcutList)
+            {
+                var row = ShortcutGrid.RowDefinitions.Count;
+                ShortcutGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var key = new Border
+                {
+                    Padding = new Thickness(8, 2, 8, 2),
+                    Margin = new Thickness(0, 3, 16, 3),
+                    CornerRadius = new CornerRadius(4),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
+                    Child = new TextBlock { Text = keys, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12 },
+                };
+                var label = new TextBlock { Text = Strings.Get(resource), VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetRow(key, row);
+                Grid.SetRow(label, row);
+                Grid.SetColumn(label, 1);
+                ShortcutGrid.Children.Add(key);
+                ShortcutGrid.Children.Add(label);
+            }
+        }
+        Shortcuts.Visibility = Shortcuts.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     private async Task PickAndOpenAsync()
     {
         var picker = new FileOpenPicker(AppWindow.Id) { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
@@ -501,10 +688,12 @@ public sealed partial class MainWindow : Window
     private void Fit_Click(object sender, RoutedEventArgs e) => Fit();
     private void Rotate_Click(object sender, RoutedEventArgs e) => Rotate(1);
     private void Play_Click(object sender, RoutedEventArgs e) => TogglePlay();
+    private void Slideshow_Click(object sender, RoutedEventArgs e) => ToggleSlideshow();
     private async void Delete_Click(object sender, RoutedEventArgs e) => await ViewModel.DeleteAsync();
     private async void Undo_Click(object sender, RoutedEventArgs e) => await ViewModel.UndoDeleteAsync();
     private void Info_Click(object sender, RoutedEventArgs e) => ToggleInfo();
     private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
+    private void Shortcuts_Tapped(object sender, TappedRoutedEventArgs e) => Shortcuts.Visibility = Visibility.Collapsed;
     private async void Recent_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.OpenAsync(((RecentItem)e.ClickedItem).Path);
     private async void Film_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.GoToAsync((FilmItem)e.ClickedItem);
 
@@ -517,6 +706,11 @@ public sealed partial class MainWindow : Window
             _ = ViewModel.LoadThumbnailAsync(item);
     }
 
+    // Thumbnails lift a little under the pointer (ScaleTransition in XAML animates it).
+    private void Thumb_PointerEntered(object sender, PointerRoutedEventArgs e) => ((UIElement)sender).Scale = new Vector3(1.12f, 1.12f, 1);
+
+    private void Thumb_PointerExited(object sender, PointerRoutedEventArgs e) => ((UIElement)sender).Scale = Vector3.One;
+
     // ---------- Drag & drop ----------
 
     private void Root_DragOver(object sender, DragEventArgs e)
@@ -525,10 +719,15 @@ public sealed partial class MainWindow : Window
             return;
         e.AcceptedOperation = DataPackageOperation.Copy;
         DropZoneBorder.Stroke = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+        DropZone.CenterPoint = new Vector3((float)DropZone.ActualWidth / 2, (float)DropZone.ActualHeight / 2, 0);
+        DropZone.Scale = new Vector3(1.03f, 1.03f, 1);
     }
 
-    private void Root_DragLeave(object sender, DragEventArgs e) =>
+    private void Root_DragLeave(object sender, DragEventArgs e)
+    {
         DropZoneBorder.Stroke = (Brush)Application.Current.Resources["ControlStrokeColorSecondaryBrush"];
+        DropZone.Scale = Vector3.One;
+    }
 
     private async void Root_Drop(object sender, DragEventArgs e)
     {
@@ -544,6 +743,8 @@ public sealed partial class MainWindow : Window
 
     private void ShowChrome()
     {
+        if (_slideshow)
+            return;   // the slideshow stays chrome-free until it stops
         BottomChrome.Opacity = TitleBar.Opacity = 1;
         BottomChrome.IsHitTestVisible = true;
         if (_cursorHidden)
@@ -557,7 +758,7 @@ public sealed partial class MainWindow : Window
 
     private void HideChrome()
     {
-        if (_pointerOverChrome || ViewModel.State != ViewState.Ready)
+        if (!_slideshow && (_pointerOverChrome || ViewModel.State != ViewState.Ready))
             return;
         BottomChrome.Opacity = TitleBar.Opacity = 0;
         BottomChrome.IsHitTestVisible = false;   // invisible chrome must not eat clicks meant for the image

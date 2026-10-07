@@ -37,6 +37,7 @@
                 </StackPanel>
 
                 <Grid x:Name="DropZone" Height="220" CornerRadius="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
                     <Rectangle x:Name="DropZoneBorder" RadiusX="12" RadiusY="12" StrokeThickness="2" StrokeDashArray="4,3"
                                Stroke="{ThemeResource ControlStrokeColorSecondaryBrush}" />
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
@@ -110,7 +111,9 @@
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="local:FilmItem">
                         <Grid Width="96" Height="64" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                              CenterPoint="48,32,0" PointerEntered="Thumb_PointerEntered" PointerExited="Thumb_PointerExited"
                               AutomationProperties.Name="{x:Bind Name}" ToolTipService.ToolTip="{x:Bind Name}">
+                            <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
                             <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                             <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" />
                         </Grid>
@@ -139,6 +142,9 @@
                     <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
                     <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" Width="44" LabelPosition="Collapsed" Click="Play_Click" Visibility="Collapsed">
                         <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="SlideshowButton" Width="44" LabelPosition="Collapsed" Click="Slideshow_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE786;" /></AppBarButton.Icon>
                     </AppBarButton>
                     <AppBarSeparator />
                     <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
@@ -190,5 +196,22 @@
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Keyboard cheat sheet (? / F1). -->
+        <Border x:Name="Shortcuts" Grid.ColumnSpan="2" Visibility="Collapsed" Background="{ThemeResource SmokeFillColorDefaultBrush}" Tapped="Shortcuts_Tapped">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" CornerRadius="12" MaxWidth="560"
+                    Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="ShortcutsTitle" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <Grid x:Name="ShortcutGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </Window>
+

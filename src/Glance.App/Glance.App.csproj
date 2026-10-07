@@ -17,6 +17,8 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Ship the .NET runtime too: a clean Windows install has no .NET 10 (R2 spirit: nothing else to install). -->
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,4 +39,17 @@
     <ProjectReference Include="..\Glance.Core\Glance.Core.csproj" />
     <ProjectReference Include="..\Glance.Imaging\Glance.Imaging.csproj" />
   </ItemGroup>
+
+  <!-- Packaged builds carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, in the package root. -->
+  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(WindowsPackageType)' == 'MSIX'">
+    <PropertyGroup>
+      <ThumbsDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)thumbs\</ThumbsDir>
+    </PropertyGroup>
+    <MSBuild Projects="..\Glance.Thumbnails\Glance.Thumbnails.csproj" Targets="Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;_IsPublishing=true;PublishDir=$(ThumbsDir)"
+             RemoveProperties="OutDir;WindowsPackageType" />
+    <ItemGroup>
+      <Content Include="$(ThumbsDir)Glance.Thumbnails.dll" Link="Glance.Thumbnails.dll" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>
