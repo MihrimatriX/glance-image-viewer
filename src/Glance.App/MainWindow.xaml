@@ -166,10 +166,40 @@
             </StackPanel>
         </Border>
 
-        <!-- Info panel (EXIF + histogram arrive with the metadata work). -->
-        <ScrollViewer x:Name="InfoPanel" Grid.Column="1" Width="280" Visibility="Collapsed"
+        <!-- Info panel (I): histogram, camera & exposure, date, location, file. -->
+        <ScrollViewer x:Name="InfoPanel" Grid.Column="1" Width="300" Visibility="Collapsed"
                       Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
-            <StackPanel Padding="16,48,16,16" Spacing="12">
+            <StackPanel Padding="16,48,16,16" Spacing="16">
+                <Border CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8">
+                    <canvas:CanvasControl x:Name="HistogramCanvas" x:Uid="HistogramCanvas" Height="96" UseSharedDevice="True" Draw="Histogram_Draw" />
+                </Border>
+
+                <StackPanel Spacing="4" Visibility="{x:Bind HasText(ViewModel.Photo.Camera), Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE722;" FontSize="16" />
+                        <TextBlock Text="{x:Bind ViewModel.Photo.Camera, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.Photo.Lens, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                               Visibility="{x:Bind HasText(ViewModel.Photo.Lens), Mode=OneWay}" />
+                    <Border HorizontalAlignment="Left" Margin="0,4,0,0" Padding="10,4" CornerRadius="12"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind HasText(ViewModel.Photo.Exposure), Mode=OneWay}">
+                        <TextBlock Text="{x:Bind ViewModel.Photo.Exposure, Mode=OneWay}" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" FontSize="12" />
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Visibility="{x:Bind TakenVisibility(ViewModel.Photo), Mode=OneWay}">
+                    <TextBlock x:Uid="InfoTakenLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind TakenText(ViewModel.Photo), Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Visibility="{x:Bind LocationVisibility(ViewModel.Photo), Mode=OneWay}">
+                    <TextBlock x:Uid="InfoLocationLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind LocationText(ViewModel.Photo), Mode=OneWay}" IsTextSelectionEnabled="True" />
+                    <HyperlinkButton x:Uid="OpenMapLink" Padding="0,2" Click="OpenMap_Click" />
+                </StackPanel>
+
+                <MenuFlyoutSeparator />
+
                 <StackPanel>
                     <TextBlock x:Uid="InfoNameLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock Text="{x:Bind ViewModel.Info.Name, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
@@ -178,22 +208,32 @@
                     <TextBlock x:Uid="InfoFolderLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock Text="{x:Bind ViewModel.Info.Folder, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                 </StackPanel>
-                <StackPanel>
-                    <TextBlock x:Uid="InfoDimensionsLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.Info.Dimensions, Mode=OneWay}" />
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock x:Uid="InfoSizeLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.Info.FileSize, Mode=OneWay}" />
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock x:Uid="InfoModifiedLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.Info.Modified, Mode=OneWay}" />
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock x:Uid="InfoFormatLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.Info.Format, Mode=OneWay}" />
-                </StackPanel>
+                <Grid ColumnSpacing="12" RowSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Uid="InfoDimensionsLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.Info.Dimensions, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Uid="InfoSizeLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.Info.FileSize, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1">
+                        <TextBlock x:Uid="InfoFormatLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.Info.Format, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="1">
+                        <TextBlock x:Uid="InfoModifiedLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.Info.Modified, Mode=OneWay}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </ScrollViewer>
 

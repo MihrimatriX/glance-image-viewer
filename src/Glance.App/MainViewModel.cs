@@ -48,6 +48,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string? Position { get; private set; }
     [ObservableProperty] public partial string? UndoMessage { get; private set; }
     [ObservableProperty] public partial ImageInfo? Info { get; private set; }
+    [ObservableProperty] public partial PhotoMetadata? Photo { get; private set; }
 
     public bool IsWelcome => State == ViewState.Welcome;
     public string? CurrentPath => _nav.Current;
@@ -141,6 +142,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Image = image;
             State = ViewState.Ready;
             Info = ImageInfo.From(path, image);
+            _ = LoadMetadataAsync(path, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -163,6 +165,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _prefetchCts = new();
         _ = PrefetchAsync(_direction, _prefetchCts.Token);
+    }
+
+    private async Task LoadMetadataAsync(string path, CancellationToken ct)
+    {
+        Photo = null;
+        try
+        {
+            var culture = System.Globalization.CultureInfo.CurrentCulture;
+            var meta = await Task.Run(() =>
+            {
+                using var file = File.OpenRead(path);
+                return PhotoMetadata.Read(file, culture);
+            }, ct);
+            if (!ct.IsCancellationRequested)
+                Photo = meta;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (IOException ex)
+        {
+            Log.Error($"Metadata read failed: {path}", ex);
+        }
     }
 
     private void ShowError(ViewState state, string path)

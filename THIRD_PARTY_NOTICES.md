@@ -11,6 +11,8 @@ Components **shipped** with Glance.
 | Microsoft.Extensions.DependencyInjection | 10.0.12 | MIT | https://github.com/dotnet/runtime |
 | Magick.NET-Q16-HDRI-AnyCPU | 14.17.2 | Apache-2.0 | https://github.com/dlemstra/Magick.NET |
 | .NET runtime (self-contained) | 10.0.12 | MIT | https://github.com/dotnet/runtime |
+| MetadataExtractor | 2.9.3 | Apache-2.0 | https://github.com/drewnoakes/metadata-extractor-dotnet |
+| XmpCore (via MetadataExtractor) | 6.1.10.1 | BSD-3-Clause | https://github.com/drewnoakes/xmp-core-dotnet |
 
 Magick.NET's native library bundles, among others (licences per upstream; verify versions against the
 Magick.NET release notes before each release):

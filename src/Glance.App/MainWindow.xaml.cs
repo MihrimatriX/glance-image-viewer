@@ -121,6 +121,7 @@ public sealed partial class MainWindow : Window
         {
             await ViewModel.CommitPendingDeleteAsync();
             Canvas.RemoveFromVisualTree();   // Win2D: break the control <-> device cycle
+            HistogramCanvas.RemoveFromVisualTree();
         };
     }
 
@@ -129,6 +130,51 @@ public sealed partial class MainWindow : Window
     public Visibility HasText(string? text) => string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility HasItems(int count) => count > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+    public string? TakenText(PhotoMetadata? photo) =>
+        photo?.Taken?.ToString("f", System.Globalization.CultureInfo.CurrentCulture);
+
+    public string? LocationText(PhotoMetadata? photo) =>
+        photo?.Location is { } p ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{p.Latitude:0.00000}, {p.Longitude:0.00000}") : null;
+
+    // x:Bind can't nest function calls, hence these two.
+    public Visibility TakenVisibility(PhotoMetadata? photo) => HasText(TakenText(photo));
+
+    public Visibility LocationVisibility(PhotoMetadata? photo) => HasText(LocationText(photo));
+
+    // Opens the browser only when the user asks (R5: the app itself never goes online).
+    private async void OpenMap_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Photo?.Location is { } p)
+            await Launcher.LaunchUriAsync(new Uri(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"https://www.openstreetmap.org/?mlat={p.Latitude}&mlon={p.Longitude}#map=15/{p.Latitude}/{p.Longitude}")));
+    }
+
+    /// <summary>R, G, B as translucent filled curves, luminance as a line; sqrt scale so one spike can't flatten the rest.</summary>
+    private void Histogram_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+    {
+        if (_image?.Histogram is not { } h)
+            return;
+        float w = (float)sender.ActualWidth, height = (float)sender.ActualHeight;
+        var max = Math.Sqrt(new[] { h.Red, h.Green, h.Blue }.SelectMany(c => c.Skip(1).Take(254)).DefaultIfEmpty(1).Max());
+        Microsoft.Graphics.Canvas.Geometry.CanvasGeometry Curve(int[] bins, bool closed)
+        {
+            using var path = new Microsoft.Graphics.Canvas.Geometry.CanvasPathBuilder(sender);
+            path.BeginFigure(0, height);
+            for (var i = 0; i < 256; i++)
+                path.AddLine(i * w / 255, height - (float)Math.Min(1, Math.Sqrt(bins[i]) / max) * height);
+            path.AddLine(w, height);
+            path.EndFigure(closed ? Microsoft.Graphics.Canvas.Geometry.CanvasFigureLoop.Closed : Microsoft.Graphics.Canvas.Geometry.CanvasFigureLoop.Open);
+            return Microsoft.Graphics.Canvas.Geometry.CanvasGeometry.CreatePath(path);
+        }
+        var ds = args.DrawingSession;
+        using (var r = Curve(h.Red, true)) ds.FillGeometry(r, Windows.UI.Color.FromArgb(110, 255, 70, 70));
+        using (var g = Curve(h.Green, true)) ds.FillGeometry(g, Windows.UI.Color.FromArgb(110, 60, 210, 90));
+        using (var b = Curve(h.Blue, true)) ds.FillGeometry(b, Windows.UI.Color.FromArgb(110, 70, 120, 255));
+        var lumaColor = Root.ActualTheme == ElementTheme.Dark ? Colors.White : Colors.Black;
+        using var l = Curve(h.Luma, false);
+        ds.DrawGeometry(l, Windows.UI.Color.FromArgb(200, lumaColor.R, lumaColor.G, lumaColor.B), 1.2f);
+    }
 
     private double Now => _clock.Elapsed.TotalMilliseconds;
 
@@ -160,6 +206,7 @@ public sealed partial class MainWindow : Window
         Title = TitleText(ViewModel.FileName);
         UpdatePlayback();
         Canvas.Invalidate();
+        HistogramCanvas.Invalidate();
     }
 
     // ---------- Rendering ----------
@@ -631,8 +678,11 @@ public sealed partial class MainWindow : Window
         AppWindow.SetPresenter(AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen
             ? AppWindowPresenterKind.Default : AppWindowPresenterKind.FullScreen);
 
-    private void ToggleInfo() =>
+    private void ToggleInfo()
+    {
         InfoPanel.Visibility = InfoPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        HistogramCanvas.Invalidate();
+    }
 
     private static readonly (string Keys, string Resource)[] ShortcutList =
     [

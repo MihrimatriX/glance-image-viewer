@@ -54,6 +54,10 @@
   <data name="Sc_Copy" xml:space="preserve"><value>Görüntüyü kopyala / yolu kopyala</value></data>
   <data name="Sc_OpenReveal" xml:space="preserve"><value>Aç / Explorer&apos;da göster</value></data>
   <data name="Sc_Help" xml:space="preserve"><value>Bu liste</value></data>
+  <data name="InfoTakenLabel.Text" xml:space="preserve"><value>Çekim tarihi</value></data>
+  <data name="InfoLocationLabel.Text" xml:space="preserve"><value>Konum</value></data>
+  <data name="OpenMapLink.Content" xml:space="preserve"><value>Haritada aç (tarayıcı)</value></data>
+  <data name="HistogramCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Histogram</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki (→)</value></data>

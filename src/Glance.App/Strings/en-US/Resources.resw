@@ -54,6 +54,10 @@
   <data name="Sc_Copy" xml:space="preserve"><value>Copy image / copy path</value></data>
   <data name="Sc_OpenReveal" xml:space="preserve"><value>Open / show in Explorer</value></data>
   <data name="Sc_Help" xml:space="preserve"><value>This list</value></data>
+  <data name="InfoTakenLabel.Text" xml:space="preserve"><value>Taken</value></data>
+  <data name="InfoLocationLabel.Text" xml:space="preserve"><value>Location</value></data>
+  <data name="OpenMapLink.Content" xml:space="preserve"><value>Open in map (browser)</value></data>
+  <data name="HistogramCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Histogram</value></data>
   <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Open (Ctrl+O)</value></data>
   <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Previous (←)</value></data>
   <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Next (→)</value></data>

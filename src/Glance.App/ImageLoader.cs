@@ -8,6 +8,9 @@ namespace Glance.App;
 /// <summary>A decoded image already on the GPU. Bitmap is at 96 DPI (1 DIP = 1 bitmap pixel).</summary>
 public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalWidth, int OriginalHeight, bool IsFull)
 {
+    /// <summary>Tones of the decoded pixels (computed before they're dropped after upload).</summary>
+    public Histogram? Histogram { get; init; }
+
     /// <summary>Animation frames (first == <see cref="Bitmap"/>), or null for stills.</summary>
     public IReadOnlyList<(CanvasBitmap Bitmap, TimeSpan Delay)>? Frames { get; init; }
 
@@ -69,7 +72,7 @@ public sealed class ImageLoader
                 // A RAW preview is never "full": zooming past it must trigger the real demosaic.
                 full || (!ImageFormats.Raw.Contains(System.IO.Path.GetExtension(path))
                          && decoded.Width == decoded.OriginalWidth && decoded.Height == decoded.OriginalHeight))
-            { Frames = frames };
+            { Frames = frames, Histogram = Histogram.From(decoded.Pixels) };
         }, ct);
 
         _cache.Add((path, image.IsFull), image);
