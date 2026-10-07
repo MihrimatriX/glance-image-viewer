@@ -116,6 +116,10 @@
                             <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
                             <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                             <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" />
+                            <!-- Prefetched: opens instantly. -->
+                            <Ellipse Width="7" Height="7" Margin="0,0,5,5" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                     Fill="{ThemeResource AccentFillColorDefaultBrush}" Stroke="White" StrokeThickness="1"
+                                     Visibility="{x:Bind IsReady, Mode=OneWay}" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

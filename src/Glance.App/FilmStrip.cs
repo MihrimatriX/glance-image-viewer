@@ -16,6 +16,9 @@ public sealed partial class FilmItem(string path) : ObservableObject
 
     [ObservableProperty] public partial ImageSource? Thumb { get; set; }
 
+    /// <summary>Decoded and on the GPU: opens instantly. Shown as a small dot in the strip.</summary>
+    [ObservableProperty] public partial bool IsReady { get; set; }
+
     internal bool Loading { get; set; }
 }
 
@@ -30,6 +33,13 @@ public sealed partial class MainViewModel
     private const int ThumbBox = 160;   // physical px; strip shows them at 64 DIP height
     private const int MaxRecent = 8;
     private readonly SemaphoreSlim _thumbGate = new(2);
+    private readonly Dictionary<string, FilmItem> _filmByPath = new(StringComparer.OrdinalIgnoreCase);
+
+    private void MarkReady(string path, bool ready)
+    {
+        if (_filmByPath.TryGetValue(path, out var item))
+            item.IsReady = ready;
+    }
 
     /// <summary>The folder, in navigation order; thumbnails load only for realized (visible) items.</summary>
     public ObservableCollection<FilmItem> Film { get; } = [];
@@ -47,8 +57,13 @@ public sealed partial class MainViewModel
             return;
         var keep = Film.ToDictionary(f => f.Path);
         Film.Clear();
+        _filmByPath.Clear();
         foreach (var path in files)
-            Film.Add(keep.GetValueOrDefault(path) ?? new FilmItem(path));
+        {
+            var item = keep.GetValueOrDefault(path) ?? new FilmItem(path) { IsReady = _loader.IsCached(path) };
+            Film.Add(item);
+            _filmByPath[path] = item;
+        }
     }
 
     public async Task GoToAsync(FilmItem item)

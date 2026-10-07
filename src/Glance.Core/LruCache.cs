@@ -11,6 +11,13 @@ public sealed class LruCache<TKey, TValue>(long budgetBytes, Func<TValue, long> 
     public long BudgetBytes => budgetBytes;
     public long SizeBytes { get; private set; }
 
+    /// <summary>Membership test that doesn't count as a use (no LRU reordering).</summary>
+    public bool Contains(TKey key)
+    {
+        lock (_lock)
+            return _map.ContainsKey(key);
+    }
+
     public bool TryGet(TKey key, out TValue value)
     {
         lock (_lock)

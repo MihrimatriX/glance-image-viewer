@@ -35,8 +35,21 @@ public sealed class ImageLoader
         _router = router;
         _cache = new(LruCache<(string, bool), LoadedImage>.DefaultBudget(),
             i => i.SizeBytes,
-            i => { if (!ReferenceEquals(i, Current) && !ReferenceEquals(i, Previous) && !ReferenceEquals(i, Pinned)) i.Dispose(); });
+            i =>
+            {
+                if (!ReferenceEquals(i, Current) && !ReferenceEquals(i, Previous) && !ReferenceEquals(i, Pinned))
+                    i.Dispose();
+                Evicted?.Invoke(i.Path);
+            });
     }
+
+    /// <summary>Raised (on the UI thread, where insertions happen) when an image leaves the cache.</summary>
+    public event Action<string>? Evicted;
+
+    public long BudgetBytes => _cache.BudgetBytes;
+
+    /// <summary>Would open instantly (screen-sized or full decode is on the GPU already).</summary>
+    public bool IsCached(string path) => _cache.Contains((path, false)) || _cache.Contains((path, true));
 
     /// <summary>The image on screen. Never disposed by eviction.</summary>
     public LoadedImage? Current { get; set; }

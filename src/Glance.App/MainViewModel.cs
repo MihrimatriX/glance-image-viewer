@@ -38,6 +38,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _undoTimer.IsRepeating = false;
         _undoTimer.Tick += (_, _) => _ = CommitPendingDeleteAsync();
         LoadRecent();
+        _loader.Evicted += path => MarkReady(path, _loader.IsCached(path));
     }
 
     [ObservableProperty] public partial LoadedImage? Image { get; private set; }
@@ -138,6 +139,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             var image = await _loader.LoadAsync(path, full: false, ct);
+            MarkReady(path, true);
             _loader.Current = image;
             Image = image;
             State = ViewState.Ready;
@@ -211,15 +213,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     // Sequential, so neighbours never compete with each other; cancelled as soon as the user navigates.
+    // Stops after half the cache budget, so a long look-ahead never evicts its own work on low-memory machines.
     private async Task PrefetchAsync(int direction, CancellationToken ct)
     {
+        long loaded = 0;
         foreach (var offset in Prefetch.Order(direction))
         {
-            if (ct.IsCancellationRequested || _nav.Peek(offset) is not { } path)
+            if (ct.IsCancellationRequested || loaded > _loader.BudgetBytes / 2)
+                return;
+            if (_nav.Peek(offset) is not { } path)
                 continue;
             try
             {
-                await _loader.LoadAsync(path, full: false, ct);
+                loaded += (await _loader.LoadAsync(path, full: false, ct)).SizeBytes;
+                MarkReady(path, true);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
