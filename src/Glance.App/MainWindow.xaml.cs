@@ -797,7 +797,9 @@ public sealed partial class MainWindow : Window
             CloseButtonText = Strings.Get("Onboarding_Later"),
             DefaultButton = ContentDialogButton.Primary,
         };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            await Launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps"));
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            return;
+        Registration.Register();   // no-op when packaged; makes Glance appear in Default apps otherwise
+        await Launcher.LaunchUriAsync(Registration.DefaultAppsUri());
     }
 }

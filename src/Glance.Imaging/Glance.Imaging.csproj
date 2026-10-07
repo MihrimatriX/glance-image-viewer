@@ -3,6 +3,9 @@
     <TargetFramework>$(WindowsTfm)</TargetFramework>
     <TargetPlatformMinVersion>$(WindowsMinVersion)</TargetPlatformMinVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- CsWin32 emits GeneratedComInterface/LibraryImport (ComWrappers) instead of built-in COM: trimming/AOT-safe. -->
+    <CsWin32RunAsBuildTask>true</CsWin32RunAsBuildTask>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
   </PropertyGroup>
   <ItemGroup>
     <!-- AnyCPU: one managed assembly for all RIDs; RID-specific builds copy only the matching native DLL (ADR 0003). -->

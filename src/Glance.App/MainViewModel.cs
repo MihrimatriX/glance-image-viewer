@@ -333,7 +333,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             });
             var package = new DataPackage();
             package.SetBitmap(RandomAccessStreamReference.CreateFromStream(bmp));
-            package.SetStorageItems([await StorageFile.GetFileFromPathAsync(path)]);
+            package.SetStorageItems(new List<IStorageItem> { await StorageFile.GetFileFromPathAsync(path) });
             Clipboard.SetContent(package);
         }
         catch (Exception ex)

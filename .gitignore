@@ -483,3 +483,4 @@ $RECYCLE.BIN/
 
 # Local packaged layout registered for development
 artifacts/
+out/

@@ -53,8 +53,7 @@ public partial class App : Application
         if (path is not null)
             await ViewModel.OpenAsync(path);
 
-        // Defaults can only be chosen for a registered (packaged) app; the portable build skips this.
-        if (IsPackaged && !Settings.Load().FirstRunDone)
+        if (!Settings.Load().FirstRunDone)
         {
             try
             {
@@ -83,7 +82,7 @@ public partial class App : Application
             .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
             .FirstOrDefault(t => !t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && (File.Exists(t) || Directory.Exists(t)));
 
-    private static bool IsPackaged
+    public static bool IsPackaged
     {
         get
         {

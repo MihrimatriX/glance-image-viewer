@@ -10,8 +10,14 @@ namespace Glance.Imaging;
 public sealed class WicDecoder : IImageDecoder
 {
     // CLSID_WICImagingFactory2 is free-threaded: one instance for all decode threads.
-    private static readonly IWICImagingFactory Factory =
-        (IWICImagingFactory)Activator.CreateInstance(Type.GetTypeFromCLSID(PInvoke.CLSID_WICImagingFactory2, throwOnError: true)!)!;
+    private static readonly IWICImagingFactory Factory = CreateFactory();
+
+    private static IWICImagingFactory CreateFactory()
+    {
+        PInvoke.CoCreateInstance(PInvoke.CLSID_WICImagingFactory2, null, Windows.Win32.System.Com.CLSCTX.CLSCTX_INPROC_SERVER, out IWICImagingFactory factory)
+            .ThrowOnFailure();
+        return factory;
+    }
 
     public int Priority => 0;
 
@@ -96,7 +102,7 @@ public sealed class WicDecoder : IImageDecoder
         {
             // Release now rather than at finalization: decoders hold native buffers sized to the image.
             foreach (var o in com)
-                Marshal.ReleaseComObject(o);
+                Release(o);
         }
     }
 
@@ -155,7 +161,7 @@ public sealed class WicDecoder : IImageDecoder
             }
             finally
             {
-                Marshal.ReleaseComObject(reader);
+                Release(reader);
             }
         }
         catch (COMException)
@@ -176,6 +182,9 @@ public sealed class WicDecoder : IImageDecoder
         8 => WICBitmapTransformOptions.WICBitmapTransformRotate270,
         _ => WICBitmapTransformOptions.WICBitmapTransformRotate0,
     };
+
+    // ComWrappers objects: release the native reference now instead of at finalization (decoders hold image-sized buffers).
+    private static void Release(object o) => (o as System.Runtime.InteropServices.Marshalling.ComObject)?.FinalRelease();
 
     private static bool Has(ReadOnlySpan<byte> header, params ReadOnlySpan<byte> magic) => header.StartsWith(magic);
 }

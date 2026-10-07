@@ -21,6 +21,21 @@ The packaged app also gives **Explorer thumbnails** for HEIC, AVIF, WebP, JXL, R
 
 Press **?** in the app for every shortcut; **S** starts a slideshow, **B** toggles the ambient light.
 
+## Install
+
+Download from **GitHub Releases** (no Store, no admin rights needed):
+
+- `Glance-<version>-x64-setup.exe` (or `-arm64-`) — installs per user, adds Glance to *Open with* and to *Settings › Default apps*, and gives Explorer thumbnails for HEIC, WebP, AVIF, JXL, RAW, PSD, EXR…
+- `Glance-<version>-x64-portable.zip` — unzip and run. The first-run dialog offers the same registration; `Glance.exe --unregister` removes it.
+
+Windows decides the default app; Glance's first-run dialog takes you straight to its page in Settings.
+
+Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
 ## Build
 
 Requires the .NET 10 SDK on Windows.

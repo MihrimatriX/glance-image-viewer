@@ -14,6 +14,14 @@ public static partial class Program
     private static int Main()
     {
         WinRT.ComWrappersSupport.InitializeComWrappers();
+
+        // Installer hooks (per-user, no UI): Setup runs --register, Uninstall runs --unregister.
+        var args = Environment.GetCommandLineArgs();
+        if (args.Contains("--register"))
+            return Registration.Register();
+        if (args.Contains("--unregister"))
+            return Registration.Unregister();
+
         var activation = AppInstance.GetCurrent().GetActivatedEventArgs();
         var main = AppInstance.FindOrRegisterForKey(InstanceKey);
 

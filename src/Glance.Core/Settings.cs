@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Glance.Core;
 
@@ -15,7 +16,7 @@ public sealed record Settings(bool FirstRunDone = false, string[]? RecentFiles =
     {
         try
         {
-            return File.Exists(FilePath) ? JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath)) ?? new() : new();
+            return File.Exists(FilePath) ? JsonSerializer.Deserialize(File.ReadAllText(FilePath), SettingsJson.Default.Settings) ?? new() : new();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -29,7 +30,7 @@ public sealed record Settings(bool FirstRunDone = false, string[]? RecentFiles =
         try
         {
             Directory.CreateDirectory(DataFolder);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, SettingsJson.Default.Settings));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -37,6 +38,10 @@ public sealed record Settings(bool FirstRunDone = false, string[]? RecentFiles =
         }
     }
 }
+
+/// <summary>Source-generated: trimming-safe, no reflection.</summary>
+[JsonSerializable(typeof(Settings))]
+internal sealed partial class SettingsJson : JsonSerializerContext;
 
 /// <summary>Local-only error log (R5: nothing leaves the machine).</summary>
 public static class Log

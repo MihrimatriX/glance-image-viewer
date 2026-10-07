@@ -19,6 +19,11 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!-- Ship the .NET runtime too: a clean Windows install has no .NET 10 (R2 spirit: nothing else to install). -->
     <SelfContained>true</SelfContained>
+    <!-- Release publish: trimmed, EN/TR only. All COM goes through source-generated ComWrappers (trim-safe). -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SatelliteResourceLanguages>en;tr</SatelliteResourceLanguages>
+    <ApplicationIcon>Assets\Glance.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,8 +45,8 @@
     <ProjectReference Include="..\Glance.Imaging\Glance.Imaging.csproj" />
   </ItemGroup>
 
-  <!-- Packaged builds carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, in the package root. -->
-  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(WindowsPackageType)' == 'MSIX'">
+  <!-- Packaged builds and release publishes carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, next to Glance.exe. -->
+  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(WindowsPackageType)' == 'MSIX' or '$(_IsPublishing)' == 'true'">
     <PropertyGroup>
       <ThumbsDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)thumbs\</ThumbsDir>
     </PropertyGroup>
