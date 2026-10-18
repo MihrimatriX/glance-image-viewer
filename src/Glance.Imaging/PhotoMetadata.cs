@@ -68,7 +68,7 @@ public sealed record PhotoMetadata(
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim().TrimEnd('\0');
 }
 
-/// <summary>256-bin RGB + luminance histogram of the decoded (screen-sized) pixels — plenty for its purpose.</summary>
+/// <summary>256-bin RGB + luminance histogram of a downscaled copy of the image — plenty for its purpose.</summary>
 public sealed record Histogram(int[] Red, int[] Green, int[] Blue, int[] Luma)
 {
     public static Histogram From(ReadOnlySpan<byte> bgra)

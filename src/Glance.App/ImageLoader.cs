@@ -8,8 +8,27 @@ namespace Glance.App;
 /// <summary>A decoded image already on the GPU. Bitmap is at 96 DPI (1 DIP = 1 bitmap pixel).</summary>
 public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalWidth, int OriginalHeight, bool IsFull)
 {
-    /// <summary>Tones of the decoded pixels (computed before they're dropped after upload).</summary>
-    public Histogram? Histogram { get; init; }
+    private const int HistogramSide = 1024;
+    private Task<Histogram>? _histogram;
+
+    /// <summary>
+    /// Tones of the image, computed on first request — only the info panel asks, so prefetched images never pay for it.
+    /// Read back from a ≤1024 px GPU copy: tones survive downscaling, a full-resolution readback would be hundreds of MB.
+    /// Call from the UI thread.
+    /// </summary>
+    public Task<Histogram> HistogramAsync() => _histogram ??= Task.Run(() =>
+    {
+        var size = Bitmap.SizeInPixels;
+        var scale = Math.Min(1.0, HistogramSide / (double)Math.Max(size.Width, size.Height));
+        using var small = new CanvasRenderTarget(ImageLoader.Device, Math.Max(1, (int)(size.Width * scale)),
+            Math.Max(1, (int)(size.Height * scale)), 96);
+        using (var ds = small.CreateDrawingSession())
+        {
+            ds.Clear(Microsoft.UI.Colors.Transparent);
+            ds.DrawImage(Bitmap, small.Bounds);
+        }
+        return Histogram.From(small.GetPixelBytes());
+    });
 
     /// <summary>Animation frames (first == <see cref="Bitmap"/>), or null for stills.</summary>
     public IReadOnlyList<(CanvasBitmap Bitmap, TimeSpan Delay)>? Frames { get; init; }
@@ -88,7 +107,7 @@ public sealed class ImageLoader
                 // A RAW preview is never "full": zooming past it must trigger the real demosaic.
                 full || (!ImageFormats.Raw.Contains(System.IO.Path.GetExtension(path))
                          && decoded.Width == decoded.OriginalWidth && decoded.Height == decoded.OriginalHeight))
-            { Frames = frames, Histogram = Histogram.From(decoded.Pixels) };
+            { Frames = frames };
         }, ct);
 
         _cache.Add((path, image.IsFull), image);

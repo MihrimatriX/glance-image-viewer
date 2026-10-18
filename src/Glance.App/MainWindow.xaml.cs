@@ -154,8 +154,16 @@ public sealed partial class MainWindow : Window
     /// <summary>R, G, B as translucent filled curves, luminance as a line; sqrt scale so one spike can't flatten the rest.</summary>
     private void Histogram_Draw(CanvasControl sender, CanvasDrawEventArgs args)
     {
-        if (_image?.Histogram is not { } h)
+        if (_image is null)
             return;
+        var pending = _image.HistogramAsync();
+        if (!pending.IsCompletedSuccessfully)
+        {
+            if (!pending.IsCompleted)
+                _ = InvalidateHistogramWhenReadyAsync(pending);
+            return;
+        }
+        var h = pending.Result;
         float w = (float)sender.ActualWidth, height = (float)sender.ActualHeight;
         var max = Math.Sqrt(new[] { h.Red, h.Green, h.Blue }.SelectMany(c => c.Skip(1).Take(254)).DefaultIfEmpty(1).Max());
         Microsoft.Graphics.Canvas.Geometry.CanvasGeometry Curve(int[] bins, bool closed)
@@ -175,6 +183,20 @@ public sealed partial class MainWindow : Window
         var lumaColor = Root.ActualTheme == ElementTheme.Dark ? Colors.White : Colors.Black;
         using var l = Curve(h.Luma, false);
         ds.DrawGeometry(l, Windows.UI.Color.FromArgb(200, lumaColor.R, lumaColor.G, lumaColor.B), 1.2f);
+    }
+
+    private async Task InvalidateHistogramWhenReadyAsync(Task<Histogram> pending)
+    {
+        try
+        {
+            await pending;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Histogram failed", ex);   // e.g. device lost mid-readback: the panel just shows no curve
+            return;
+        }
+        HistogramCanvas.Invalidate();
     }
 
     private double Now => _clock.Elapsed.TotalMilliseconds;

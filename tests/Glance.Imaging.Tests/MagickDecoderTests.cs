@@ -75,6 +75,45 @@ public class MagickDecoderTests
         await Assert.ThrowsAsync<InvalidDataException>(() => Router.DecodeAsync(bad, ".heic", new DecodeOptions(), Ct));
     }
 
+    [Fact]
+    public async Task Cancelling_mid_stream_stops_reading_and_reports_cancellation()
+    {
+        using var img = new MagickImage("plasma:", 1500, 1500);   // incompressible enough to need many reads
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        using var file = new CancelAfterBytes(img.ToByteArray(MagickFormat.Png), 64 * 1024, cts);
+        var magickOnly = new DecoderRouter([new MagickDecoder()]);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => magickOnly.DecodeAsync(file, ".png", new DecodeOptions(), cts.Token));
+        Assert.True(file.BytesRead < file.Length / 2, $"read {file.BytesRead} of {file.Length} bytes after cancelling");
+    }
+
+    [Fact]
+    public async Task Cancelling_after_a_whole_file_read_reports_cancellation_not_corruption()
+    {
+        using var img = new MagickImage("plasma:", 512, 512);
+        var bytes = img.ToByteArray(MagickFormat.WebP);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        using var file = new CancelAfterBytes(bytes, bytes.Length, cts);   // WebP's coder reads everything first
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Router.DecodeAsync(file, ".webp", new DecodeOptions(), cts.Token));
+    }
+
+    /// <summary>Cancels <paramref name="cts"/> once <paramref name="limit"/> bytes have been handed out, as a user navigating away would.</summary>
+    private sealed class CancelAfterBytes(byte[] data, int limit, CancellationTokenSource cts) : MemoryStream(data, writable: false)
+    {
+        public long BytesRead { get; private set; }
+
+        // A MemoryStream subclass routes Read(Span) through this overload.
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var n = base.Read(buffer, offset, count);
+            BytesRead += n;
+            if (BytesRead >= limit)
+                cts.Cancel();
+            return n;
+        }
+    }
+
     private static MemoryStream Encode(MagickFormat format, uint w, uint h, Action<MagickImage>? setup = null, byte green = 200)
     {
         using var img = new MagickImage(MagickColor.FromRgb(40, green, 90), w, h);

@@ -26,13 +26,25 @@ public sealed class MagickDecoder : IImageDecoder
         || h.StartsWith("#?RADIANCE"u8) || h.StartsWith("#?RGBE"u8)
         || ImageFormats.Magick.Contains(extension) || ImageFormats.Raw.Contains(extension);
 
+    /// <remarks>
+    /// Cancellation reaches into the decode two ways: the source stream throws on its next read (stops coders that stream —
+    /// PNG and JXL, for example — and the whole-file read of HEIC/AVIF/WebP), and every operation after reading (coalesce, resize,
+    /// orient, colour conversion, tone mapping) is stopped through Magick's progress monitor.
+    /// </remarks>
     public Task<DecodedImage> DecodeAsync(Stream source, DecodeOptions options, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // ponytail: Magick decode isn't cancellable mid-flight; cancellation is checked before and after.
-        var image = Decode(source, options);
-        ct.ThrowIfCancellationRequested();
-        return Task.FromResult(image);
+        try
+        {
+            var image = Decode(ct.CanBeCanceled ? new CancellableStream(source, ct) : source, options, ct);
+            ct.ThrowIfCancellationRequested();   // a coder cut off mid-stream may still return a partial image
+            return Task.FromResult(image);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException && ct.IsCancellationRequested)
+        {
+            // An interrupted coder or operation fails however it fails (corrupt file, disposed image): report what it was.
+            throw new OperationCanceledException(ct);
+        }
     }
 
     /// <summary>Loads the native library ahead of the first Magick-routed file (ADR 0003). Safe to call repeatedly.</summary>
@@ -44,14 +56,14 @@ public sealed class MagickDecoder : IImageDecoder
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static DecodedImage Decode(Stream source, DecodeOptions options)
+    private static DecodedImage Decode(Stream source, DecodeOptions options, CancellationToken ct)
     {
         MagickSetup.EnsureInitialized();
         var settings = new MagickReadSettings { BackgroundColor = MagickColors.None };   // SVG: keep transparency
         var ext = options.Extension;
 
         if (ImageFormats.Raw.Contains(ext))
-            return DecodeRaw(source, options, settings);
+            return DecodeRaw(source, options, settings, ct);
         if (ext.Equals(".tga", StringComparison.OrdinalIgnoreCase))
             settings.Format = MagickFormat.Tga;   // no magic bytes at all
 
@@ -59,37 +71,39 @@ public sealed class MagickDecoder : IImageDecoder
         {
             using var frames = new MagickImageCollection();
             frames.Read(source, settings);
+            ct.ThrowIfCancellationRequested();
             if (frames.Count > 1)
-                return DecodeAnimation(frames, options);
-            return ToDecoded((MagickImage)frames[0], options);
+                return DecodeAnimation(frames, options, ct);
+            return ToDecoded((MagickImage)frames[0], options, ct);
         }
 
         using var image = new MagickImage();
         image.Read(source, settings);
-        return ToDecoded(image, options);
+        return ToDecoded(image, options, ct);
     }
 
     // Full LibRaw demosaic; the embedded-preview fast path is RawPreviewDecoder.
-    private static DecodedImage DecodeRaw(Stream source, DecodeOptions options, MagickReadSettings settings)
+    private static DecodedImage DecodeRaw(Stream source, DecodeOptions options, MagickReadSettings settings, CancellationToken ct)
     {
         settings.Format = MagickFormat.Dng;   // ImageMagick's DNG coder is LibRaw: it reads every RAW flavour
         settings.SetDefine(MagickFormat.Dng, "use-camera-wb", true);
         using var image = new MagickImage();
         image.Read(source, settings);
-        return ToDecoded(image, options);
+        return ToDecoded(image, options, ct);
     }
 
-    private static DecodedImage DecodeAnimation(MagickImageCollection frames, DecodeOptions options)
+    private static DecodedImage DecodeAnimation(MagickImageCollection frames, DecodeOptions options, CancellationToken ct)
     {
         frames.Coalesce();   // every frame becomes a full canvas: disposal/blend handled once, here
-        var first = ToDecoded((MagickImage)frames[0], options);
+        ct.ThrowIfCancellationRequested();
+        var first = ToDecoded((MagickImage)frames[0], options, ct);
         if ((long)first.Pixels.Length * frames.Count > MaxAnimationBytes)
             return first;
 
         var list = new List<AnimationFrame>(frames.Count);
         foreach (var frame in frames.Cast<MagickImage>())
         {
-            var pixels = list.Count == 0 ? first.Pixels : ToDecoded(frame, options).Pixels;
+            var pixels = list.Count == 0 ? first.Pixels : ToDecoded(frame, options, ct).Pixels;
             // Browsers' rule: delays under 20 ms mean "as fast as the format's default", i.e. 100 ms.
             var ticks = frame.AnimationTicksPerSecond > 0 ? frame.AnimationTicksPerSecond : 100;
             var delay = TimeSpan.FromSeconds((double)frame.AnimationDelay / ticks);
@@ -98,8 +112,13 @@ public sealed class MagickDecoder : IImageDecoder
         return first with { Frames = list };
     }
 
-    private static DecodedImage ToDecoded(MagickImage image, DecodeOptions options)
+    private static DecodedImage ToDecoded(MagickImage image, DecodeOptions options, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+        // Attached after Read on purpose: Read replaces the native image and the monitor with it (Magick.NET 14.17.2),
+        // and no coder here reports read progress anyway — the stream handles that part.
+        if (ct.CanBeCanceled)
+            image.Progress += (_, e) => e.Cancel |= ct.IsCancellationRequested;
         if (options.Orientation is { } forced)
             image.Orientation = (OrientationType)forced;
         // WebP/JXL coders keep EXIF but don't set Orientation; HEIC/AVIF coders apply irot/imir and report TopLeft.
