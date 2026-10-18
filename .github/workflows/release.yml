@@ -1,9 +1,22 @@
 name: release
 
-# Push a tag like v0.2.0 -> GitHub Release with a per-user installer and a portable zip, for x64 and ARM64.
+# Push a tag like v0.2.0 -> GitHub Release with a per-user installer and a portable zip for x64 and ARM64,
+# winget manifests for that release, and a Store-ready .msixbundle (workflow artifact; the Store signs it).
+# Pull requests that touch packaging and manual runs build everything but publish nothing.
 on:
   push:
     tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - installer/**
+      - packaging/**
+      - src/Glance.App/Package.appxmanifest
+      - src/Glance.App/Glance.App.csproj
+  workflow_dispatch:
+
+env:
+  WINGET_ID: MihrimatriX.Glance
 
 jobs:
   build:
@@ -18,14 +31,16 @@ jobs:
           global-json-file: global.json
           dotnet-version: 10.0.x
 
+      - name: Version
+        shell: pwsh
+        run: ./packaging/Get-Version.ps1 -Ref '${{ github.ref }}' >> $env:GITHUB_ENV
+
       - name: Publish (self-contained, trimmed, with Explorer thumbnail handler)
         shell: pwsh
         run: |
-          $v = '${{ github.ref_name }}'.TrimStart('v')
-          "VERSION=$v" >> $env:GITHUB_ENV
           # NativeAOT linking of the thumbnail DLL needs vswhere on PATH.
           $env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
-          dotnet publish src/Glance.App -c Release -r win-${{ matrix.arch }} -p:Version=$v -o out/Glance
+          dotnet publish src/Glance.App -c Release -r win-${{ matrix.arch }} -p:Version=$env:VERSION -o out/Glance
           Get-ChildItem out/Glance -Recurse -Filter *.pdb | Remove-Item
 
       - name: Portable zip
@@ -38,6 +53,7 @@ jobs:
           if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress }
           $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source ?? "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           & $iscc /DAppVersion=$env:VERSION /DArch=${{ matrix.arch }} /DSourceDir=..\out\Glance installer\Glance.iss
+          if ($LASTEXITCODE -ne 0) { throw "iscc failed ($LASTEXITCODE)" }
 
       - uses: actions/upload-artifact@v7
         with:
@@ -46,17 +62,121 @@ jobs:
             out/*.zip
             out/*-setup.exe
 
+  msix:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - name: Version
+        shell: pwsh
+        run: ./packaging/Get-Version.ps1 -Ref '${{ github.ref }}' >> $env:GITHUB_ENV
+
+      # Partner Center gives the identity (Product management › Product identity). Until the repository
+      # variables are set, the dev placeholder from the manifest is kept: the package builds but the Store rejects it.
+      - name: Stamp Store identity and version
+        shell: pwsh
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: ./packaging/Set-StoreIdentity.ps1 -Manifest src/Glance.App/Package.appxmanifest -Version $env:VERSION
+
+      - name: Build MSIX (unsigned, for Store upload)
+        shell: pwsh
+        run: |
+          $env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
+          dotnet publish src/Glance.App -c Release -r win-${{ matrix.arch }} -p:Version=$env:VERSION `
+            -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false `
+            -p:AppxBundle=Never -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageDir="$PWD\out\msix\\"
+          $msix = Get-ChildItem out/msix -Recurse -Filter *.msix | Select-Object -First 1
+          if (-not $msix) { throw 'No .msix produced' }
+          New-Item -ItemType Directory -Force out/pkg | Out-Null
+          Copy-Item $msix.FullName "out/pkg/Glance-$env:VERSION-${{ matrix.arch }}.msix"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: msix-${{ matrix.arch }}
+          path: out/pkg/*.msix
+
+  bundle:
+    needs: msix
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: packaging
+      - name: Version
+        shell: pwsh
+        run: ./packaging/Get-Version.ps1 -Ref '${{ github.ref }}' >> $env:GITHUB_ENV
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: msix-*
+          path: msix
+          merge-multiple: true
+      - name: Bundle x64 + ARM64
+        shell: pwsh
+        run: |
+          $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          & $makeappx.FullName bundle /d msix /p "Glance-$env:VERSION.msixbundle" /bv "$env:VERSION.0" /o
+          if ($LASTEXITCODE -ne 0) { throw "makeappx failed ($LASTEXITCODE)" }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-msixbundle
+          path: '*.msixbundle'
+
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: packaging
       - uses: actions/download-artifact@v8
         with:
+          pattern: glance-*
           path: dist
           merge-multiple: true
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ github.ref_name }}" dist/* --repo "${{ github.repository }}" --generate-notes
+
+      # Manifests point at the release assets just uploaded. First submission: see docs/releasing.md.
+      - name: winget manifests
+        shell: pwsh
+        run: |
+          $v = '${{ github.ref_name }}'.TrimStart('v')
+          ./packaging/winget/New-WingetManifest.ps1 -Id $env:WINGET_ID -Version $v -Dist dist `
+            -BaseUrl "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" -Out winget
+      - uses: actions/upload-artifact@v7
+        with:
+          name: winget-manifests
+          path: winget
+
+  # Later releases: open the winget-pkgs PR automatically once the package exists there (docs/releasing.md).
+  winget:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v') && vars.WINGET_AUTOSUBMIT == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: wingetcreate update --submit
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $v = '${{ github.ref_name }}'.TrimStart('v')
+          $base = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe update $env:WINGET_ID --version $v --submit --token $env:WINGET_TOKEN `
+            --urls "$base/Glance-$v-x64-setup.exe|x64" "$base/Glance-$v-arm64-setup.exe|arm64"

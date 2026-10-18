@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- File types mirror src/Glance.Imaging/ImageFormats.cs. Publisher is a dev placeholder until Store registration (Phase 3). -->
+<!-- File types mirror src/Glance.Imaging/ImageFormats.cs. Publisher is a dev placeholder; release CI stamps the Partner Center identity (packaging/Set-StoreIdentity.ps1). -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -8,7 +8,7 @@
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   IgnorableNamespaces="uap rescap desktop2 com">
 
-  <Identity Name="Glance.ImageViewer" Publisher="CN=Glance Dev" Version="0.1.1.0" />
+  <Identity Name="Glance.ImageViewer" Publisher="CN=Glance Dev" Version="0.1.0.0" />
 
   <Properties>
     <DisplayName>Glance</DisplayName>
