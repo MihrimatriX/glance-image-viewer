@@ -90,13 +90,14 @@ jobs:
           STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
         run: ./packaging/Set-StoreIdentity.ps1 -Manifest src/Glance.App/Package.appxmanifest -Version $env:VERSION
 
+      # SideloadOnly: the .msixupload container task needs full-framework MSBuild; the bundle job wraps the .msix instead.
       - name: Build MSIX (unsigned, for Store upload)
         shell: pwsh
         run: |
           $env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
           dotnet publish src/Glance.App -c Release -r win-${{ matrix.arch }} -p:Version=$env:VERSION `
             -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false `
-            -p:AppxBundle=Never -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageDir="$PWD\out\msix\\"
+            -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxSymbolPackageEnabled=false -p:AppxPackageDir="$PWD\out\msix\\"
           $msix = Get-ChildItem out/msix -Recurse -Filter *.msix | Select-Object -First 1
           if (-not $msix) { throw 'No .msix produced' }
           New-Item -ItemType Directory -Force out/pkg | Out-Null
