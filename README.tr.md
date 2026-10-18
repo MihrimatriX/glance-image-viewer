@@ -124,6 +124,7 @@ dotnet publish src/Glance.App -c Release -r win-x64 -o out/Glance
 | `src/Glance.Imaging` | Decoder'lar: WIC (üretilmiş COM ile), geri kalan her şey için Magick.NET, RAW önizleme tarayıcısı, metadata, düzenleme |
 | `src/Glance.Thumbnails` | NativeAOT ile derlenen Explorer küçük resim eklentisi (Explorer'ın sürecine .NET yüklenmez) |
 | `tests/` | xUnit v3: decoder'lar, 8 EXIF yönünün tamamı, renk yönetimi, formatlar, düzenleme, sistem kaydı |
+| `benchmarks/` | BenchmarkDotNet ile decode ve soğuk başlangıç ölçümleri, uygulama açılış betiği ([ayrıntı](benchmarks/README.md)) |
 | `docs/adr` | Mimari karar kayıtları — her seçimin "neden"i |
 
 ## Katkı

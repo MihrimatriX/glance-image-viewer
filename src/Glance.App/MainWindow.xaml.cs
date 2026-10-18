@@ -274,6 +274,7 @@ public sealed partial class MainWindow : Window
                 var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
                 DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
             }
+            StartupTrace.FirstImageDrawn();
             UpdateZoomText();
             DrawCropOverlay(ds);
             DrawLoupe(ds, sender, image);

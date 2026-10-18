@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Glance.Benchmarks/Glance.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Glance.App/Glance.App.csproj" />
     <Project Path="src/Glance.Core/Glance.Core.csproj" />

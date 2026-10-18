@@ -124,6 +124,7 @@ Pushing a tag such as `v0.2.0` makes `.github/workflows/release.yml` build the x
 | `src/Glance.Imaging` | Decoders: WIC (through generated COM), Magick.NET for everything else, RAW preview scanner, metadata, editing |
 | `src/Glance.Thumbnails` | Explorer thumbnail handler compiled with NativeAOT (no .NET runtime loaded into Explorer's host) |
 | `tests/` | xUnit v3: decoders, all 8 EXIF orientations, colour management, formats, editing, registration |
+| `benchmarks/` | BenchmarkDotNet decode and cold-start benchmarks, app start-up script ([details](benchmarks/README.md)) |
 | `docs/adr` | Architecture decision records — the "why" behind each choice |
 
 ## Contributing

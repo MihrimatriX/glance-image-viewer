@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(WindowsTfm)</TargetFramework>
+    <TargetPlatformMinVersion>$(WindowsMinVersion)</TargetPlatformMinVersion>
+    <OutputType>Exe</OutputType>
+    <!-- BenchmarkDotNet needs optimized code with full symbols; it refuses Debug builds anyway. -->
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Glance.Imaging\Glance.Imaging.csproj" />
+  </ItemGroup>
+</Project>
