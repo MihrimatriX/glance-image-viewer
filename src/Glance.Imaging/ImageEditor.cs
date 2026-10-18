@@ -35,6 +35,7 @@ public static class ImageEditor
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Save(string source, EditRequest edit, SaveFormat format, string destination)
     {
+        MagickSetup.EnsureInitialized();
         var settings = new MagickReadSettings();
         if (ImageFormats.Raw.Contains(Path.GetExtension(source)))
         {

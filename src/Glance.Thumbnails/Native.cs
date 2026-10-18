@@ -63,6 +63,9 @@ internal static unsafe class ComStream
 {
     private const int StatReadFlag = 0;   // STATFLAG_DEFAULT: include the name (gives us the extension)
 
+    /// <summary>Bigger files get Explorer's icon: a thumbnail isn't worth holding hundreds of MB in the surrogate.</summary>
+    public const long MaxBytes = 512L << 20;
+
     [StructLayout(LayoutKind.Sequential)]
     private struct STATSTG
     {
@@ -86,8 +89,10 @@ internal static unsafe class ComStream
         var extension = s.pwcsName is null ? "" : Path.GetExtension(new string(s.pwcsName));
         Marshal.FreeCoTaskMem((nint)s.pwcsName);
 
-        // ponytail: whole file in memory; thumbnailable files are photos (tens of MB at most).
-        using var buffer = new MemoryStream(checked((int)Math.Min(s.cbSize, int.MaxValue)));
+        // ponytail: whole file in memory, capped at MaxBytes; RAW previews could be read by seeking to the IFD offsets instead.
+        if (s.cbSize > MaxBytes)
+            throw new InvalidDataException($"{s.cbSize} bytes is over the {MaxBytes}-byte thumbnail limit.");
+        using var buffer = new MemoryStream((int)s.cbSize);
         var chunk = new byte[1 << 20];
         fixed (byte* p = chunk)
         {
@@ -99,6 +104,8 @@ internal static unsafe class ComStream
                     Marshal.ThrowExceptionForHR(hr);
                 if (got == 0)
                     break;
+                if (buffer.Length + got > MaxBytes)   // the size from Stat is only a hint
+                    throw new InvalidDataException($"Stream is over the {MaxBytes}-byte thumbnail limit.");
                 buffer.Write(chunk, 0, (int)got);
             }
         }
