@@ -49,6 +49,7 @@ internal sealed partial class ThumbnailProvider : IInitializeWithStream, IThumbn
     private static DecodedImage Decode(byte[] data, string extension, int size)
     {
         Native.EnsureMagickResolvable();
+        MagickSetup.Limits = MagickLimits.Thumbnail;   // takes effect on the first decode in this host, ignored after
         var options = new DecodeOptions(size, size) { Extension = extension };
         if (ImageFormats.Raw.Contains(extension))
         {

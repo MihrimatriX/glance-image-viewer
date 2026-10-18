@@ -37,11 +37,16 @@ public sealed class MagickDecoder : IImageDecoder
 
     /// <summary>Loads the native library ahead of the first Magick-routed file (ADR 0003). Safe to call repeatedly.</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static void WarmUp() => _ = MagickNET.Version;
+    public static void WarmUp()
+    {
+        MagickSetup.EnsureInitialized();
+        _ = MagickNET.Version;
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static DecodedImage Decode(Stream source, DecodeOptions options)
     {
+        MagickSetup.EnsureInitialized();
         var settings = new MagickReadSettings { BackgroundColor = MagickColors.None };   // SVG: keep transparency
         var ext = options.Extension;
 
