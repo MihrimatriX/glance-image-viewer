@@ -50,6 +50,11 @@
     <PropertyGroup>
       <ThumbsDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)thumbs\</ThumbsDir>
     </PropertyGroup>
+    <!-- Glance.App doesn't reference the handler, so a clean clone has never restored it. RuntimeIdentifiers in its
+         project covers both RIDs; the extra property keeps this evaluation apart from the Publish one below. -->
+    <MSBuild Projects="..\Glance.Thumbnails\Glance.Thumbnails.csproj" Targets="Restore"
+             Properties="Configuration=$(Configuration);_GlanceThumbsRestore=true"
+             RemoveProperties="OutDir;WindowsPackageType;RuntimeIdentifier;SelfContained" />
     <MSBuild Projects="..\Glance.Thumbnails\Glance.Thumbnails.csproj" Targets="Publish"
              Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;_IsPublishing=true;PublishDir=$(ThumbsDir)"
              RemoveProperties="OutDir;WindowsPackageType" />
