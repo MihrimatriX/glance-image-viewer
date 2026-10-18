@@ -36,3 +36,23 @@ public static class ImageFormats
         return Magick.Contains(ext) || Raw.Contains(ext);
     }
 }
+
+/// <summary>Which codec an ISO-BMFF image (HEIF container) needs: Windows ships them as separate Store extensions.</summary>
+internal enum HeifKind { Hevc, Av1 }
+
+internal static class HeifBrand
+{
+    /// <summary>HEIC/HEIF or AVIF by the <c>ftyp</c> major brand; null for anything else (MP4 video included).</summary>
+    public static HeifKind? Detect(ReadOnlySpan<byte> h)
+    {
+        if (h.Length < 12 || !h[4..8].SequenceEqual("ftyp"u8))
+            return null;
+        var brand = h[8..12];
+        if (brand.SequenceEqual("avif"u8) || brand.SequenceEqual("avis"u8))
+            return HeifKind.Av1;
+        return brand.SequenceEqual("heic"u8) || brand.SequenceEqual("heix"u8) || brand.SequenceEqual("hevc"u8)
+            || brand.SequenceEqual("heim"u8) || brand.SequenceEqual("heis"u8) || brand.SequenceEqual("mif1"u8)
+            || brand.SequenceEqual("msf1"u8)
+            ? HeifKind.Hevc : null;
+    }
+}

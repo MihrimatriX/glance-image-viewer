@@ -13,3 +13,4 @@ GUID_WICPixelFormat32bppPBGRA
 PropVariantClear
 GUID_ContainerFormatGif
 CoCreateInstance
+GUID_ContainerFormatHeif

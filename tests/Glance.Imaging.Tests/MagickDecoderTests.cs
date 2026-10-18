@@ -76,6 +76,14 @@ public class MagickDecoderTests
     }
 
     [Fact]
+    public async Task Mp4_video_is_not_taken_for_heif()
+    {
+        // Same ISO-BMFF box layout as HEIC/AVIF; only the ftyp brand tells them apart.
+        using var video = new MemoryStream([0, 0, 0, 0x18, .. "ftypisom"u8, 0, 0, 0, 0, .. "isomiso2"u8]);
+        await Assert.ThrowsAsync<NotSupportedException>(() => Router.DecodeAsync(video, ".mp4", new DecodeOptions(), Ct));
+    }
+
+    [Fact]
     public async Task Cancelling_mid_stream_stops_reading_and_reports_cancellation()
     {
         using var img = new MagickImage("plasma:", 1500, 1500);   // incompressible enough to need many reads
