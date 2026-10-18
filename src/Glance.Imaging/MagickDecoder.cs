@@ -14,7 +14,7 @@ public sealed class MagickDecoder : IImageDecoder
     public int Priority => 20;
 
     public bool CanDecode(string extension, ReadOnlySpan<byte> h) =>
-        IsIsoBmffImage(h)                                                   // HEIC/HEIF/AVIF
+        HeifBrand.Detect(h) is not null                                     // HEIC/HEIF/AVIF (after WIC, when Windows has the codec)
         || (h.StartsWith("RIFF"u8) && h.Length >= 12 && h[8..12].SequenceEqual("WEBP"u8))
         || Has(h, 0xFF, 0x0A)                                               // JXL codestream
         || Has(h, 0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20, 0x0D, 0x0A, 0x87, 0x0A)   // JXL container
@@ -158,16 +158,6 @@ public sealed class MagickDecoder : IImageDecoder
             bgra[i + 1] = (byte)((bgra[i + 1] * a + 127) / 255);
             bgra[i + 2] = (byte)((bgra[i + 2] * a + 127) / 255);
         }
-    }
-
-    private static bool IsIsoBmffImage(ReadOnlySpan<byte> h)
-    {
-        if (h.Length < 12 || !h[4..8].SequenceEqual("ftyp"u8))
-            return false;
-        var brand = h[8..12];
-        return brand.SequenceEqual("heic"u8) || brand.SequenceEqual("heix"u8) || brand.SequenceEqual("hevc"u8)
-            || brand.SequenceEqual("heim"u8) || brand.SequenceEqual("heis"u8) || brand.SequenceEqual("mif1"u8)
-            || brand.SequenceEqual("msf1"u8) || brand.SequenceEqual("avif"u8) || brand.SequenceEqual("avis"u8);
     }
 
     private static bool Has(ReadOnlySpan<byte> header, params ReadOnlySpan<byte> magic) => header.StartsWith(magic);

@@ -6,7 +6,10 @@ using Windows.Win32.System.Variant;
 
 namespace Glance.Imaging;
 
-/// <summary>Formats guaranteed on every Windows 10/11 install. WebP/HEIC/AVIF/JXL never come here, even if extensions are installed.</summary>
+/// <summary>
+/// Formats guaranteed on every Windows 10/11 install, plus HEIC/AVIF when Windows' own codec extensions are there: those use
+/// hardware decode and skip Magick's native load. WebP/JXL never come here.
+/// </summary>
 public sealed class WicDecoder : IImageDecoder
 {
     // CLSID_WICImagingFactory2 is free-threaded: one instance for all decode threads.
@@ -30,7 +33,38 @@ public sealed class WicDecoder : IImageDecoder
         || h.StartsWith("II*\0"u8) || h.StartsWith("MM\0*"u8)  // TIFF
         || Has(h, 0x00, 0x00, 0x01, 0x00)                       // ICO
         || Has(h, 0x49, 0x49, 0xBC)                             // JPEG XR
-        || h.StartsWith("DDS "u8));
+        || h.StartsWith("DDS "u8)
+        || (HeifBrand.Detect(h) is { } heif && CanTryHeif(heif)));
+
+    private static bool CanTryHeif(HeifKind kind) =>
+        !(kind == HeifKind.Hevc ? HeifState.HevcFailed : HeifState.Av1Failed) && HeifState.DecoderInstalled.Value;
+
+    // HEIF container: the HEIF extension (the decoder) and HEVC/AV1 extensions (the codec inside) install separately, so a
+    // registered decoder can still fail every file. The first failure of a kind hands that kind to Magick for the session.
+    // A nested class so that CanDecode doesn't create the WIC factory for every HEIC before the probe can catch a failure.
+    private static class HeifState
+    {
+        public static readonly Lazy<bool> DecoderInstalled = new(ProbeHeifDecoder);
+        public static volatile bool HevcFailed, Av1Failed;
+    }
+
+    private static unsafe bool ProbeHeifDecoder()
+    {
+        try
+        {
+            var format = PInvoke.GUID_ContainerFormatHeif;
+            Release(Factory.CreateDecoder(&format, null));   // any vendor
+            return true;
+        }
+        catch (COMException)
+        {
+            return false;   // WINCODEC_ERR_COMPONENTNOTFOUND: no HEIF Image Extensions
+        }
+        catch (TypeInitializationException)
+        {
+            return false;   // no WIC at all (test runs off Windows): leave HEIF to Magick
+        }
+    }
 
     // acTL must precede IDAT; right after the 25-byte IHDR chunk it sits at offset 37.
     private static bool IsApng(ReadOnlySpan<byte> h) => h.Length >= 41 && h[37..41].SequenceEqual("acTL"u8);
@@ -41,7 +75,22 @@ public sealed class WicDecoder : IImageDecoder
         var data = GC.AllocateUninitializedArray<byte>(checked((int)(source.Length - source.Position)), pinned: true);
         await source.ReadExactlyAsync(data, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
-        return Decode(data, options);
+        if (HeifBrand.Detect(data) is not { } heif)
+            return Decode(data, options);
+        try
+        {
+            return Decode(data, options);
+        }
+        catch (COMException ex)
+        {
+            // Typically the HEVC/AV1 extension is missing. A corrupt file lands here too and costs WIC for the session;
+            // Magick still opens every later file, just without hardware decode.
+            if (heif == HeifKind.Hevc)
+                HeifState.HevcFailed = true;
+            else
+                HeifState.Av1Failed = true;
+            throw new NotSupportedException($"Windows' {heif} codec failed; ImageMagick takes over.", ex);
+        }
     }
 
     /// <summary>Decodes an in-memory (POH-pinned) file. <paramref name="orientation"/> overrides EXIF, e.g. for RAW previews.</summary>
@@ -56,17 +105,14 @@ public sealed class WicDecoder : IImageDecoder
             stream.InitializeFromMemory(data);   // POH-pinned array: WIC's pointer stays valid after the call
             var decoder = Track(Factory.CreateDecoderFromStream(stream, Guid.Empty, WICDecodeOptions.WICDecodeMetadataCacheOnDemand));
             decoder.GetFrameCount(out var frameCount);
-            if (frameCount > 1)
-            {
-                decoder.GetContainerFormat(out var container);
-                if (container == PInvoke.GUID_ContainerFormatGif)
-                    throw new NotSupportedException("Animated GIF: frame compositing is left to Magick.");
-            }
+            decoder.GetContainerFormat(out var container);
+            if (frameCount > 1 && container == PInvoke.GUID_ContainerFormatGif)
+                throw new NotSupportedException("Animated GIF: frame compositing is left to Magick.");
             decoder.GetFrame(0, out var frame);
             Track(frame);
 
             frame.GetSize(out var w, out var h);
-            orientation ??= ReadOrientation(frame);
+            orientation ??= ReadOrientation(frame, container == PInvoke.GUID_ContainerFormatHeif);
             var swapped = orientation.Value >= 5;
             uint ow = swapped ? h : w, oh = swapped ? w : h;
             var scale = Math.Min(1.0, Math.Min((options.MaxWidth ?? (double)ow) / ow, (options.MaxHeight ?? (double)oh) / oh));
@@ -146,18 +192,19 @@ public sealed class WicDecoder : IImageDecoder
         return transform;
     }
 
-    private static ushort ReadOrientation(IWICBitmapFrameDecode frame)
+    /// <remarks>
+    /// HEIF: the decoder leaves irot/imir to the caller and reports them as WICHeifOrientation. That one wins over EXIF,
+    /// which HEIF treats as informational — the same choice libheif makes on the Magick path.
+    /// </remarks>
+    private static ushort ReadOrientation(IWICBitmapFrameDecode frame, bool heif)
     {
         try
         {
             frame.GetMetadataQueryReader(out var reader);
             try
             {
-                PROPVARIANT value = default;
-                reader.GetMetadataByName("System.Photo.Orientation", ref value);
-                var o = value.Anonymous.Anonymous.vt == VARENUM.VT_UI2 ? value.Anonymous.Anonymous.Anonymous.uiVal : (ushort)1;
-                PInvoke.PropVariantClear(ref value);
-                return o is >= 1 and <= 8 ? o : (ushort)1;
+                return (heif ? QueryOrientation(reader, "/heifProps/{ushort=1}") : null)
+                    ?? QueryOrientation(reader, "System.Photo.Orientation") ?? 1;
             }
             finally
             {
@@ -166,7 +213,23 @@ public sealed class WicDecoder : IImageDecoder
         }
         catch (COMException)
         {
-            return 1;   // no metadata block or no orientation tag
+            return 1;   // no metadata block
+        }
+    }
+
+    private static ushort? QueryOrientation(IWICMetadataQueryReader reader, string name)
+    {
+        try
+        {
+            PROPVARIANT value = default;
+            reader.GetMetadataByName(name, ref value);
+            ushort? o = value.Anonymous.Anonymous.vt == VARENUM.VT_UI2 ? value.Anonymous.Anonymous.Anonymous.uiVal : null;
+            PInvoke.PropVariantClear(ref value);
+            return o is >= 1 and <= 8 ? o : null;
+        }
+        catch (COMException)
+        {
+            return null;   // no such tag
         }
     }
 
