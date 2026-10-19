@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Glance.Benchmarks/Glance.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Glance.App/Glance.App.csproj" />
+    <Project Path="src/Glance.Core/Glance.Core.csproj" />
+    <Project Path="src/Glance.Imaging/Glance.Imaging.csproj" />
+    <Project Path="src/Glance.Thumbnails/Glance.Thumbnails.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Glance.Core.Tests/Glance.Core.Tests.csproj" />
+    <Project Path="tests/Glance.Imaging.Tests/Glance.Imaging.Tests.csproj" />
+  </Folder>
+</Solution>

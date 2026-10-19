@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mihrimatrix.github.io/glance-image-viewer/sitemap.xml
