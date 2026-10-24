@@ -127,6 +127,13 @@ public sealed partial class MainWindow : Window
         Root.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, _) => ShowChrome()), handledEventsToo: true);
         Root.ActualThemeChanged += (_, _) => Canvas.Invalidate();
 
+        // Floating panels glide in from where they sit instead of popping.
+        AnimateVisibility(InfoPanel, new Vector3(24, 0, 0));
+        AnimateVisibility(CropBar, new Vector3(0, -12, 0));
+        AnimateVisibility(UndoToast, new Vector3(0, -12, 0));
+        AnimateVisibility(NoticeToast, new Vector3(0, -12, 0));
+        AnimateVisibility(Shortcuts, Vector3.Zero);
+
         Closed += async (_, _) =>
         {
             await ViewModel.CommitPendingDeleteAsync();
@@ -148,10 +155,14 @@ public sealed partial class MainWindow : Window
     public string? LocationText(PhotoMetadata? photo) =>
         photo?.Location is { } p ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{p.Latitude:0.00000}, {p.Longitude:0.00000}") : null;
 
-    // x:Bind can't nest function calls, hence these two.
+    // x:Bind can't nest function calls, hence these three.
     public Visibility TakenVisibility(PhotoMetadata? photo) => HasText(TakenText(photo));
 
     public Visibility LocationVisibility(PhotoMetadata? photo) => HasText(LocationText(photo));
+
+    /// <summary>The photo card shows when the file carries any of camera, date taken or location.</summary>
+    public Visibility PhotoVisibility(PhotoMetadata? photo) =>
+        string.IsNullOrEmpty(photo?.Camera) && TakenText(photo) is null && LocationText(photo) is null ? Visibility.Collapsed : Visibility.Visible;
 
     // Opens the browser only when the user asks (R5: the app itself never goes online).
     private async void OpenMap_Click(object sender, RoutedEventArgs e)
@@ -770,8 +781,18 @@ public sealed partial class MainWindow : Window
     private void ToggleInfo()
     {
         InfoPanel.Visibility = InfoPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        SyncToggleButtons();
         HistogramCanvas.Invalidate();
         _ = RefreshPaletteAsync();
+    }
+
+    /// <summary>The toolbar's mode toggles mirror the modes, whether they changed by click, key, menu or implicitly.</summary>
+    private void SyncToggleButtons()
+    {
+        InfoButton.IsChecked = InfoPanel.Visibility == Visibility.Visible;
+        CropButton.IsChecked = _cropMode;
+        CompareButton.IsChecked = Comparing;
+        LoupeButton.IsChecked = _loupe;
     }
 
     private static readonly (string Keys, string Resource)[] ShortcutList =

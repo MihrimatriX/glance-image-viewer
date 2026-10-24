@@ -37,6 +37,7 @@
 | **Düzenleme** | Kayıpsız JPEG döndürme, kırpma (**C**), kalite ve boyut ayarıyla JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP olarak farklı kaydet (**Ctrl+S**). Orijinal dosya habersizce değiştirilmez: yerinde kaydetmede orijinal önce Geri Dönüşüm Kutusu'na taşınır |
 | **Karşılaştırma** | İki fotoğraf yan yana, yakınlaştırma ve kaydırma senkronize (**K**) |
 | **Büyüteç** | 8 kat büyüteç ve renk seçici; tıklayınca `#RRGGBB` kopyalanır (**L**) |
+| **Renk teması** | Bilgi panelinde fotoğrafın baskın renkleri ve renk çemberi uyumu (tamamlayıcı, üçlü, …); temanın tamamı CSS değişkenleri ya da JSON olarak kopyalanır veya `.css` / `.json` dosyası olarak kaydedilir |
 | **Animasyon** | GIF ve animasyonlu WebP; oynat / duraklat ve kare kare ilerleme |
 | **Renk** | Gömülü ICC profilleri sRGB'ye dönüştürülür (iPhone'un Display P3 fotoğrafları doğru görünür), HDR ton eşlenir |
 | **Güvenlik ağı** | Silme Geri Dönüşüm Kutusu'na gider, 5 saniye içinde geri alınabilir |

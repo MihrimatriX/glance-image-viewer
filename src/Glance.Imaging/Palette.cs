@@ -96,5 +96,8 @@ public static class Palette
         return Rgb((int)Math.Round((r + m) * 255), (int)Math.Round((g + m) * 255), (int)Math.Round((b + m) * 255));
     }
 
+    /// <summary><c>#RRGGBB</c>, as the app shows, copies and exports colours.</summary>
+    public static string ToHex(uint rgb) => $"#{rgb:X6}";
+
     private static uint Rgb(int r, int g, int b) => (uint)(r << 16 | g << 8 | b);
 }

@@ -50,6 +50,7 @@ public sealed partial class MainWindow
         }
         CompareLabels.Visibility = Comparing ? Visibility.Visible : Visibility.Collapsed;
         PinnedName.Text = Comparing ? Path.GetFileName(_pinned!.Path) : "";
+        SyncToggleButtons();
         StopMotion();
         _fit = true;
         Canvas.Invalidate();
@@ -93,6 +94,7 @@ public sealed partial class MainWindow
     {
         _loupe = !_loupe;
         _loupeHex = null;
+        SyncToggleButtons();
         Canvas.Invalidate();
     }
 
@@ -165,12 +167,14 @@ public sealed partial class MainWindow
         return true;
     }
 
-    private void CopyColor(string hex)
+    private void CopyColor(string hex) => CopyText(hex, Strings.Format("Notice_ColorCopied", hex));
+
+    private void CopyText(string text, string notice)
     {
         var package = new DataPackage();
-        package.SetText(hex);
+        package.SetText(text);
         Clipboard.SetContent(package);
-        ViewModel.Flash(string.Format(System.Globalization.CultureInfo.CurrentCulture, Strings.Get("Notice_ColorCopied"), hex));
+        ViewModel.Flash(notice);
     }
 
     private void Compare_Click(object sender, RoutedEventArgs e) => ToggleCompare();

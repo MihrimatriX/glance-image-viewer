@@ -101,7 +101,7 @@
   <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
   <data name="CompareButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Yan yana karşılaştır (K)</value></data>
   <data name="LoupeButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Büyüteç ve renk seçici (L)</value></data>
-  <data name="ThemeLabel.Text" xml:space="preserve"><value>Renk teması · kopyalamak için tıklayın</value></data>
+  <data name="ThemeLabel.Text" xml:space="preserve"><value>Renk teması</value></data>
   <data name="HarmonyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Renk uyumu</value></data>
   <data name="Harmony_Complementary" xml:space="preserve"><value>Tamamlayıcı</value></data>
   <data name="Harmony_Analogous" xml:space="preserve"><value>Analog</value></data>
@@ -125,4 +125,19 @@
   <data name="Notice_PrintFailed" xml:space="preserve"><value>Yazdırma açılamadı</value></data>
   <data name="Sc_Print" xml:space="preserve"><value>Yazdır</value></data>
   <data name="Sc_DragOut" xml:space="preserve"><value>Dosyayı başka uygulamaya sürükle</value></data>
+  <data name="InfoTitle.Text" xml:space="preserve"><value>Ayrıntılar</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Kapat (I)</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Ayrıntıları kapat</value></data>
+  <data name="InfoFileHeader.Text" xml:space="preserve"><value>Dosya</value></data>
+  <data name="ThemeExportText.Text" xml:space="preserve"><value>Dışa aktar</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Renk temasının tamamını CSS veya JSON olarak dışa aktar</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Renk temasını dışa aktar</value></data>
+  <data name="ThemeCopyCss.Text" xml:space="preserve"><value>CSS değişkenleri olarak kopyala</value></data>
+  <data name="ThemeCopyJson.Text" xml:space="preserve"><value>JSON olarak kopyala</value></data>
+  <data name="ThemeSaveCss.Text" xml:space="preserve"><value>.css olarak kaydet…</value></data>
+  <data name="ThemeSaveJson.Text" xml:space="preserve"><value>.json olarak kaydet…</value></data>
+  <data name="Notice_ThemeCopied" xml:space="preserve"><value>Renk teması {0} olarak kopyalandı</value></data>
+  <data name="Swatch_Tooltip" xml:space="preserve"><value>{0} · kopyalamak için tıklayın</value></data>
+  <data name="Theme_FileSuffix" xml:space="preserve"><value>-tema</value></data>
+  <data name="WelcomeHint.Text" xml:space="preserve"><value>HEIC, AVIF, WebP, JPEG XL, RAW, PSD ve daha fazlası · kısayollar için ? tuşuna basın</value></data>
 </root>

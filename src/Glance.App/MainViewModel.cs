@@ -424,4 +424,7 @@ internal static class Strings
     private static readonly ResourceLoader Loader = new();
 
     public static string Get(string key) => Loader.GetString(key);
+
+    public static string Format(string key, string arg) =>
+        string.Format(System.Globalization.CultureInfo.CurrentCulture, Get(key), arg);
 }

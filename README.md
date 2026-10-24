@@ -37,6 +37,7 @@
 | **Editing** | Lossless JPEG rotation, crop (**C**), save as JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP with quality and resize (**Ctrl+S**). Originals are never overwritten silently: in-place saves move the original to the Recycle Bin first |
 | **Compare** | Two photos side by side with synchronised zoom and pan (**K**) |
 | **Loupe** | 8× magnifier with colour picker; click copies `#RRGGBB` (**L**) |
+| **Colour theme** | The photo's dominant colours plus a colour-wheel harmony (complementary, triad, …) in the info panel; export the whole theme as CSS custom properties or JSON — copy or save as `.css` / `.json` |
 | **Animation** | GIF and animated WebP with play / pause and frame stepping |
 | **Colour** | Embedded ICC profiles converted to sRGB (iPhone Display P3 looks right), HDR tone-mapped |
 | **Safety net** | Delete goes to the Recycle Bin with a 5-second undo |

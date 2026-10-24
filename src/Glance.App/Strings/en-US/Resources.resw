@@ -101,7 +101,7 @@
   <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Save as (Ctrl+S)</value></data>
   <data name="CompareButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Compare side by side (K)</value></data>
   <data name="LoupeButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Loupe and colour picker (L)</value></data>
-  <data name="ThemeLabel.Text" xml:space="preserve"><value>Colour theme · click to copy</value></data>
+  <data name="ThemeLabel.Text" xml:space="preserve"><value>Colour theme</value></data>
   <data name="HarmonyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Colour harmony</value></data>
   <data name="Harmony_Complementary" xml:space="preserve"><value>Complementary</value></data>
   <data name="Harmony_Analogous" xml:space="preserve"><value>Analogous</value></data>
@@ -125,4 +125,19 @@
   <data name="Notice_PrintFailed" xml:space="preserve"><value>Couldn't open printing</value></data>
   <data name="Sc_Print" xml:space="preserve"><value>Print</value></data>
   <data name="Sc_DragOut" xml:space="preserve"><value>Drag the file into another app</value></data>
+  <data name="InfoTitle.Text" xml:space="preserve"><value>Details</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Close (I)</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Close details</value></data>
+  <data name="InfoFileHeader.Text" xml:space="preserve"><value>File</value></data>
+  <data name="ThemeExportText.Text" xml:space="preserve"><value>Export</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Export the whole colour theme as CSS or JSON</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Export colour theme</value></data>
+  <data name="ThemeCopyCss.Text" xml:space="preserve"><value>Copy as CSS variables</value></data>
+  <data name="ThemeCopyJson.Text" xml:space="preserve"><value>Copy as JSON</value></data>
+  <data name="ThemeSaveCss.Text" xml:space="preserve"><value>Save as .css…</value></data>
+  <data name="ThemeSaveJson.Text" xml:space="preserve"><value>Save as .json…</value></data>
+  <data name="Notice_ThemeCopied" xml:space="preserve"><value>Colour theme copied as {0}</value></data>
+  <data name="Swatch_Tooltip" xml:space="preserve"><value>{0} · click to copy</value></data>
+  <data name="Theme_FileSuffix" xml:space="preserve"><value>-theme</value></data>
+  <data name="WelcomeHint.Text" xml:space="preserve"><value>HEIC, AVIF, WebP, JPEG XL, RAW, PSD and more · press ? for shortcuts</value></data>
 </root>

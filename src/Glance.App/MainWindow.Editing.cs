@@ -22,11 +22,15 @@ public sealed partial class MainWindow
     private void ToggleCrop()
     {
         if (_image is null)
+        {
+            SyncToggleButtons();   // a click already checked the toolbar toggle: nothing to crop, so undo that
             return;
+        }
         _cropMode = !_cropMode;
         _crop = null;
         _cropAnchor = null;
         CropBar.Visibility = _cropMode ? Visibility.Visible : Visibility.Collapsed;
+        SyncToggleButtons();
         Canvas.Invalidate();
     }
 

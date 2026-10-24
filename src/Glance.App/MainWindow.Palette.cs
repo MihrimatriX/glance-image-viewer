@@ -9,10 +9,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Windows.Storage.Pickers;
 
 namespace Glance.App;
 
-/// <summary>Colour theme in the info card: dominant colours of the image and a colour-wheel harmony of one of them.</summary>
+/// <summary>Colour theme in the info card: dominant colours of the image, a colour-wheel harmony of one of them, and CSS / JSON export.</summary>
 public sealed partial class MainWindow
 {
     private uint[] _palette = [], _harmonyColors = [];
@@ -52,27 +53,70 @@ public sealed partial class MainWindow
     private void UpdateTheme()
     {
         _harmonyColors = _palette.Length == 0 ? [] : Palette.Harmonize(_paletteBase, SelectedHarmony);
-        FillSwatches(ExtractedSwatches, _palette, 48, isBaseRow: true);
-        FillSwatches(HarmonySwatches, _harmonyColors, 26, isBaseRow: false);
+        FillSwatches(ExtractedSwatches, _palette, isBaseRow: true);
+        FillSwatches(HarmonySwatches, _harmonyColors, isBaseRow: false);
         WheelCanvas.Invalidate();
     }
 
-    private void FillSwatches(StackPanel row, uint[] colors, double width, bool isBaseRow)
+    /// <summary>One equal-width column per colour; the dominant row also prints each hex and checks the base.</summary>
+    private void FillSwatches(Grid row, uint[] colors, bool isBaseRow)
     {
         row.Children.Clear();
-        foreach (var rgb in colors)
+        row.ColumnDefinitions.Clear();
+        for (var i = 0; i < colors.Length; i++)
         {
-            var hex = Hex(rgb);
-            var selected = isBaseRow && rgb == _paletteBase;
+            var rgb = colors[i];
+            var hex = Palette.ToHex(rgb);
+            var chip = new Grid
+            {
+                Height = isBaseRow ? 40 : 24,
+                CornerRadius = new CornerRadius(isBaseRow ? 6 : 4),
+                Background = new SolidColorBrush(ToColor(rgb)),
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],   // keeps near-background colours visible
+                BorderThickness = new Thickness(1),
+            };
+            UIElement content = chip;
+            if (isBaseRow)
+            {
+                if (rgb == _paletteBase)
+                {
+                    chip.Children.Add(new FontIcon
+                    {
+                        Glyph = "\uE73E",   // check mark: this colour drives the harmony
+                        FontSize = 14,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Foreground = new SolidColorBrush(IsLight(rgb) ? Colors.Black : Colors.White),
+                    });
+                }
+                content = new StackPanel
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        chip,
+                        new TextBlock
+                        {
+                            Text = hex,
+                            FontSize = 10,
+                            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                        },
+                    },
+                };
+            }
             var swatch = new Button
             {
                 Padding = new Thickness(2),
                 MinWidth = 0,
-                BorderThickness = new Thickness(selected ? 2 : 0),
-                BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
-                Content = new Border { Width = width - 4, Height = 24, CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(ToColor(rgb)) },
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Background = new SolidColorBrush(Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                Content = content,
             };
-            ToolTipService.SetToolTip(swatch, hex);
+            ToolTipService.SetToolTip(swatch, Strings.Format("Swatch_Tooltip", hex));
             AutomationProperties.SetName(swatch, hex);
             swatch.Click += (_, _) =>
             {
@@ -82,7 +126,48 @@ public sealed partial class MainWindow
                 _paletteBase = rgb;
                 UpdateTheme();
             };
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            Grid.SetColumn(swatch, i);
             row.Children.Add(swatch);
+        }
+    }
+
+    // ---------- Export: the whole theme at once ----------
+
+    private ColorTheme CurrentTheme => new(_palette, _paletteBase, SelectedHarmony, _harmonyColors);
+
+    private string? ThemeSource => _image?.Path is { } path ? Path.GetFileName(path) : null;
+
+    private void ThemeCopyCss_Click(object sender, RoutedEventArgs e) => CopyText(CurrentTheme.ToCss(ThemeSource), Strings.Format("Notice_ThemeCopied", "CSS"));
+
+    private void ThemeCopyJson_Click(object sender, RoutedEventArgs e) => CopyText(CurrentTheme.ToJson(ThemeSource), Strings.Format("Notice_ThemeCopied", "JSON"));
+
+    private async void ThemeSaveCss_Click(object sender, RoutedEventArgs e) => await SaveThemeAsync(CurrentTheme.ToCss(ThemeSource), "CSS", ".css");
+
+    private async void ThemeSaveJson_Click(object sender, RoutedEventArgs e) => await SaveThemeAsync(CurrentTheme.ToJson(ThemeSource), "JSON", ".json");
+
+    /// <summary>Saves the theme (taken when the menu was clicked) next to the image as "photo-theme.css" by default.</summary>
+    private async Task SaveThemeAsync(string text, string kind, string extension)
+    {
+        if (_image?.Path is not { } path)
+            return;
+        var picker = new FileSavePicker(AppWindow.Id)
+        {
+            SuggestedFileName = Path.GetFileNameWithoutExtension(path) + Strings.Get("Theme_FileSuffix"),
+            SuggestedFolder = Path.GetDirectoryName(path)!,
+        };
+        picker.FileTypeChoices.Add(kind, [extension]);
+        if (await picker.PickSaveFileAsync() is not { Path: { Length: > 0 } destination })
+            return;
+        try
+        {
+            await File.WriteAllTextAsync(destination, text);   // UTF-8 without BOM, as web tooling expects
+            ViewModel.Flash(Strings.Format("Notice_Saved", Path.GetFileName(destination)));
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Theme export failed: {destination}", ex);
+            ViewModel.Flash(Strings.Format("Notice_SaveFailed", Path.GetFileName(destination)));
         }
     }
 
@@ -123,5 +208,6 @@ public sealed partial class MainWindow
 
     private static Windows.UI.Color ToColor(uint rgb) => ColorHelper.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 
-    private static string Hex(uint rgb) => $"#{rgb:X6}";
+    // Perceived brightness (Rec. 601 luma): picks a check mark that stays readable on the swatch.
+    private static bool IsLight(uint rgb) => 0.299 * (rgb >> 16) + 0.587 * (rgb >> 8 & 0xFF) + 0.114 * (rgb & 0xFF) > 150;
 }

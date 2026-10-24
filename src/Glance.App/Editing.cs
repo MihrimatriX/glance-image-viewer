@@ -43,7 +43,7 @@ public sealed partial class MainViewModel
         catch (Exception ex)
         {
             Log.Error($"Saving rotation failed: {path}", ex);
-            ShowNotice(Format("Notice_SaveFailed", Path.GetFileName(path)));
+            ShowNotice(Strings.Format("Notice_SaveFailed", Path.GetFileName(path)));
         }
         return true;
     }
@@ -56,13 +56,13 @@ public sealed partial class MainViewModel
         try
         {
             await Task.Run(() => ImageEditor.Save(path, edit, format, destination));
-            ShowNotice(Format("Notice_Saved", Path.GetFileName(destination)));
+            ShowNotice(Strings.Format("Notice_Saved", Path.GetFileName(destination)));
             await OpenAsync(destination);
         }
         catch (Exception ex)
         {
             Log.Error($"Save as failed: {path} -> {destination}", ex);
-            ShowNotice(Format("Notice_SaveFailed", Path.GetFileName(destination)));
+            ShowNotice(Strings.Format("Notice_SaveFailed", Path.GetFileName(destination)));
         }
     }
 
@@ -91,7 +91,4 @@ public sealed partial class MainViewModel
             // replaced by a newer notice
         }
     }
-
-    private static string Format(string key, string arg) =>
-        string.Format(System.Globalization.CultureInfo.CurrentCulture, Strings.Get(key), arg);
 }
