@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Glance.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
+    xmlns:local="using:Glance.App">
+
+    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop" PreviewKeyDown="Root_PreviewKeyDown">
+        <Grid.Resources>
+            <!-- A section of the info card, like a Settings card: lifts its group off the acrylic. -->
+            <Style x:Key="InfoCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="12" />
+            </Style>
+            <Style x:Key="InfoLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="InfoIconStyle" TargetType="FontIcon">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            </Style>
+        </Grid.Resources>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <canvas:CanvasControl
+            x:Name="Canvas"
+            x:Uid="ImageCanvas"
+            UseSharedDevice="True"
+            IsTabStop="True"
+            ManipulationMode="Scale,TranslateX,TranslateY"
+            CreateResources="Canvas_CreateResources"
+            Draw="Canvas_Draw"
+            PointerWheelChanged="Canvas_PointerWheelChanged"
+            PointerPressed="Canvas_PointerPressed"
+            PointerMoved="Canvas_PointerMoved"
+            PointerReleased="Canvas_PointerReleased"
+            PointerCaptureLost="Canvas_PointerReleased"
+            DragStarting="Canvas_DragStarting"
+            ManipulationDelta="Canvas_ManipulationDelta"
+            DoubleTapped="Canvas_DoubleTapped">
+            <!-- Right click: the toolbar's file actions plus the Windows hand-offs, with their shortcuts shown. -->
+            <canvas:CanvasControl.ContextFlyout>
+                <MenuFlyout x:Name="ImageMenu" Opening="ImageMenu_Opening">
+                    <MenuFlyoutItem x:Uid="MenuCopy" KeyboardAcceleratorTextOverride="Ctrl+C" Click="MenuCopy_Click" Icon="Copy" />
+                    <MenuFlyoutItem x:Uid="MenuCopyPath" KeyboardAcceleratorTextOverride="Ctrl+Shift+C" Click="MenuCopyPath_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuReveal" KeyboardAcceleratorTextOverride="Ctrl+E" Click="MenuReveal_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEC50;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem x:Uid="MenuRotate" KeyboardAcceleratorTextOverride="R" Click="Rotate_Click" Icon="Rotate" />
+                    <MenuFlyoutItem x:Uid="MenuCrop" KeyboardAcceleratorTextOverride="C" Click="Crop_Click" Icon="Crop" />
+                    <MenuFlyoutItem x:Uid="MenuSaveAs" KeyboardAcceleratorTextOverride="Ctrl+S" Click="SaveAs_Click" Icon="SaveLocal" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem x:Uid="MenuWallpaper" Click="MenuWallpaper_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7F4;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuShare" Click="MenuShare_Click" Icon="Share" />
+                    <MenuFlyoutItem x:Uid="MenuPrint" KeyboardAcceleratorTextOverride="Ctrl+P" Click="MenuPrint_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE749;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem x:Uid="MenuInfo" KeyboardAcceleratorTextOverride="I" Click="Info_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE946;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuDelete" KeyboardAcceleratorTextOverride="Del" Click="Delete_Click" Icon="Delete" />
+                </MenuFlyout>
+            </canvas:CanvasControl.ContextFlyout>
+        </canvas:CanvasControl>
+
+        <!-- Welcome: logo, drop zone, recent files. -->
+        <ScrollViewer Visibility="{x:Bind ViewModel.IsWelcome, Mode=OneWay}" VerticalScrollBarVisibility="Auto">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Padding="24,64,24,24" MaxWidth="560">
+                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="14">
+                    <Image Source="ms-appx:///Assets/logo-128.png" Width="48" Height="48" />
+                    <TextBlock Text="Glance" Style="{StaticResource TitleLargeTextBlockStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Grid x:Name="DropZone" Height="220" CornerRadius="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
+                    <Rectangle x:Name="DropZoneBorder" RadiusX="12" RadiusY="12" StrokeThickness="2" StrokeDashArray="4,3"
+                               Stroke="{ThemeResource ControlStrokeColorSecondaryBrush}" />
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <FontIcon Glyph="&#xEB9F;" FontSize="40" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="WelcomeText" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                        <Button x:Uid="OpenButton" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" Click="Open_Click" />
+                        <TextBlock x:Uid="WelcomeHint" Style="{StaticResource InfoLabelStyle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="24,4,24,0" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.HasRecent, Mode=OneWay}">
+                    <TextBlock x:Uid="RecentHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <ListView ItemsSource="{x:Bind ViewModel.Recent}" IsItemClickEnabled="True" SelectionMode="None" ItemClick="Recent_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:RecentItem">
+                                <StackPanel Padding="0,6" AutomationProperties.Name="{x:Bind Name}">
+                                    <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind Folder}" Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="480" TextAlignment="Center"
+                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                   Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+        <ProgressRing HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.ShowSpinner, Mode=OneWay}" />
+
+        <!-- Title bar: drag region + icon + file name; fades with the rest of the chrome. -->
+        <Grid x:Name="TitleBar" Grid.ColumnSpan="2" Height="32" VerticalAlignment="Top" Background="Transparent">
+            <Grid.OpacityTransition>
+                <ScalarTransition />
+            </Grid.OpacityTransition>
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="12,0" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-16.png" Width="16" Height="16" />
+                <TextBlock x:Name="TitleLabel" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                           Text="{x:Bind TitleText(ViewModel.FileName), Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Bottom chrome: filmstrip + toolbar. -->
+        <StackPanel x:Name="BottomChrome" VerticalAlignment="Bottom" Spacing="8" Padding="16,0,16,16"
+                    PointerEntered="Chrome_PointerEntered" PointerExited="Chrome_PointerExited">
+            <StackPanel.OpacityTransition>
+                <ScalarTransition />
+            </StackPanel.OpacityTransition>
+
+            <ListView x:Name="FilmStrip" x:Uid="FilmStrip" Height="84" HorizontalAlignment="Center" MaxWidth="1200"
+                      ItemsSource="{x:Bind ViewModel.Film}" SelectedIndex="{x:Bind ViewModel.Index, Mode=OneWay}"
+                      IsItemClickEnabled="True" ItemClick="Film_ItemClick" SelectionMode="Single"
+                      ContainerContentChanging="Film_ContainerContentChanging"
+                      ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                      ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                      CornerRadius="8" Padding="4" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                      Visibility="{x:Bind HasItems(ViewModel.Film.Count), Mode=OneWay}">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="2,0" />
+                        <Setter Property="MinWidth" Value="0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:FilmItem">
+                        <Grid Width="96" Height="64" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                              CenterPoint="48,32,0" PointerEntered="Thumb_PointerEntered" PointerExited="Thumb_PointerExited"
+                              AutomationProperties.Name="{x:Bind Name}" ToolTipService.ToolTip="{x:Bind Name}">
+                            <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
+                            <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" />
+                            <!-- Prefetched: opens instantly. -->
+                            <Ellipse Width="7" Height="7" Margin="0,0,5,5" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                     Fill="{ThemeResource AccentFillColorDefaultBrush}" Stroke="White" StrokeThickness="1"
+                                     Visibility="{x:Bind IsReady, Mode=OneWay}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4" CornerRadius="8"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <AppBarButton x:Uid="OpenToolbarButton" Width="44" LabelPosition="Collapsed" Icon="OpenFile" Click="Open_Click" />
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="PrevButton" Width="44" LabelPosition="Collapsed" Icon="Back" Click="Prev_Click" />
+                    <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                               Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
+                    <AppBarButton x:Uid="NextButton" Width="44" LabelPosition="Collapsed" Icon="Forward" Click="Next_Click" />
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="ZoomOutButton" Width="44" LabelPosition="Collapsed" Icon="ZoomOut" Click="ZoomOut_Click" />
+                    <Button x:Name="ZoomText" x:Uid="ZoomPercentButton" MinWidth="64" Padding="6,4" Background="Transparent" BorderThickness="0"
+                            FontSize="12" Click="ZoomText_Click" Content="100%" />
+                    <AppBarButton x:Uid="ZoomInButton" Width="44" LabelPosition="Collapsed" Icon="ZoomIn" Click="ZoomIn_Click" />
+                    <AppBarButton x:Uid="FitButton" Width="44" LabelPosition="Collapsed" Click="Fit_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
+                    <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" Width="44" LabelPosition="Collapsed" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
+                    <!-- Modes are toggles: the toolbar shows which one is on, however it was switched. -->
+                    <AppBarToggleButton x:Name="CropButton" x:Uid="CropButton" Width="44" LabelPosition="Collapsed" Icon="Crop" Click="Crop_Click" />
+                    <AppBarToggleButton x:Name="CompareButton" x:Uid="CompareButton" Width="44" LabelPosition="Collapsed" Click="Compare_Click">
+                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                    <AppBarToggleButton x:Name="LoupeButton" x:Uid="LoupeButton" Width="44" LabelPosition="Collapsed" Click="Loupe_Click">
+                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                    <AppBarButton x:Uid="SaveAsButton" Width="44" LabelPosition="Collapsed" Icon="SaveLocal" Click="SaveAs_Click" />
+                    <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" Width="44" LabelPosition="Collapsed" Click="Play_Click" Visibility="Collapsed">
+                        <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarButton x:Uid="SlideshowButton" Width="44" LabelPosition="Collapsed" Click="Slideshow_Click">
+                        <AppBarButton.Icon><FontIcon Glyph="&#xE786;" /></AppBarButton.Icon>
+                    </AppBarButton>
+                    <AppBarSeparator />
+                    <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
+                    <AppBarToggleButton x:Name="InfoButton" x:Uid="InfoButton" Width="44" LabelPosition="Collapsed" Click="Info_Click">
+                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarToggleButton.Icon>
+                    </AppBarToggleButton>
+                    <AppBarButton x:Uid="FullscreenButton" Width="44" LabelPosition="Collapsed" Icon="FullScreen" Click="Fullscreen_Click" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Undo toast for delete. -->
+        <Border x:Name="UndoToast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,48,0,0" Padding="16,8,8,8" CornerRadius="8"
+                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                Visibility="{x:Bind HasText(ViewModel.UndoMessage), Mode=OneWay, FallbackValue=Collapsed}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.UndoMessage, Mode=OneWay}" />
+                <Button x:Uid="UndoButton" Click="Undo_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- Info card (I), floating over the image: histogram, colour theme, camera & exposure, date, location, file. -->
+        <Grid x:Name="InfoPanel" Grid.ColumnSpan="2" Width="320" Visibility="Collapsed"
+              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,44,12,12" CornerRadius="8"
+              Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+              PointerEntered="Chrome_PointerEntered" PointerExited="Chrome_PointerExited">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <Grid Padding="16,8,6,4">
+                <TextBlock x:Uid="InfoTitle" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                <Button x:Uid="InfoCloseButton" HorizontalAlignment="Right" Width="32" Height="32" Padding="0"
+                        Background="Transparent" BorderThickness="0" Click="Info_Click">
+                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+                </Button>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Padding="12,4,12,12" Spacing="8">
+                    <Border Style="{StaticResource InfoCardStyle}" Padding="8">
+                        <canvas:CanvasControl x:Name="HistogramCanvas" x:Uid="HistogramCanvas" Height="96" UseSharedDevice="True" Draw="Histogram_Draw" />
+                    </Border>
+
+                    <!-- Colour theme: dominant colours (click = base + copy), a harmony of the base, its points on the wheel, and export. -->
+                    <Border x:Name="ThemeSection" Style="{StaticResource InfoCardStyle}" Visibility="Collapsed">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE790;" Style="{StaticResource InfoIconStyle}" />
+                                    <TextBlock x:Uid="ThemeLabel" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                </StackPanel>
+                                <DropDownButton x:Uid="ThemeExportButton" HorizontalAlignment="Right" Padding="8,4">
+                                    <DropDownButton.Content>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xEDE1;" FontSize="14" />
+                                            <TextBlock x:Uid="ThemeExportText" FontSize="12" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DropDownButton.Content>
+                                    <DropDownButton.Flyout>
+                                        <!-- Tag = key into ThemeFormats; format names are the same in every language. -->
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuFlyoutSubItem x:Uid="ThemeCopyMenu" Icon="Copy">
+                                                <MenuFlyoutItem Text="CSS" Tag="css" Click="ThemeCopy_Click" />
+                                                <MenuFlyoutItem Text="Tailwind v4" Tag="tailwind" Click="ThemeCopy_Click" />
+                                                <MenuFlyoutItem Text="SCSS" Tag="scss" Click="ThemeCopy_Click" />
+                                                <MenuFlyoutItem Text="JSON" Tag="json" Click="ThemeCopy_Click" />
+                                                <MenuFlyoutItem x:Uid="ThemeHexList" Tag="hex" Click="ThemeCopy_Click" />
+                                            </MenuFlyoutSubItem>
+                                            <MenuFlyoutSubItem x:Uid="ThemeSaveMenu" Icon="SaveLocal">
+                                                <MenuFlyoutItem Text="CSS (.css)…" Tag="css" Click="ThemeSave_Click" />
+                                                <MenuFlyoutItem Text="Tailwind v4 (.css)…" Tag="tailwind" Click="ThemeSave_Click" />
+                                                <MenuFlyoutItem Text="SCSS (.scss)…" Tag="scss" Click="ThemeSave_Click" />
+                                                <MenuFlyoutItem Text="JSON (.json)…" Tag="json" Click="ThemeSave_Click" />
+                                                <MenuFlyoutItem x:Uid="ThemeSaveHexList" Tag="hex" Click="ThemeSave_Click" />
+                                            </MenuFlyoutSubItem>
+                                        </MenuFlyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+                            </Grid>
+                            <Grid x:Name="ExtractedSwatches" ColumnSpacing="6" />
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <canvas:CanvasControl x:Name="WheelCanvas" Width="104" Height="104" UseSharedDevice="True" Draw="Wheel_Draw" />
+                                <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                                    <ComboBox x:Name="HarmonyBox" x:Uid="HarmonyBox" HorizontalAlignment="Stretch" SelectionChanged="HarmonyBox_SelectionChanged" />
+                                    <Grid x:Name="HarmonySwatches" ColumnSpacing="4" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Photo: camera & exposure, date taken, location — whichever the file carries. -->
+                    <Border Style="{StaticResource InfoCardStyle}" Visibility="{x:Bind PhotoVisibility(ViewModel.Photo), Mode=OneWay, FallbackValue=Collapsed}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="4" Visibility="{x:Bind HasText(ViewModel.Photo.Camera), Mode=OneWay, FallbackValue=Collapsed}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE722;" Style="{StaticResource InfoIconStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Photo.Camera, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBlock Text="{x:Bind ViewModel.Photo.Lens, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="22,0,0,0"
+                                           Visibility="{x:Bind HasText(ViewModel.Photo.Lens), Mode=OneWay, FallbackValue=Collapsed}" />
+                                <Border HorizontalAlignment="Left" Margin="22,4,0,0" Padding="10,4" CornerRadius="12"
+                                        Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind HasText(ViewModel.Photo.Exposure), Mode=OneWay, FallbackValue=Collapsed}">
+                                    <TextBlock Text="{x:Bind ViewModel.Photo.Exposure, Mode=OneWay}" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" FontSize="12" />
+                                </Border>
+                            </StackPanel>
+
+                            <Grid ColumnSpacing="8" Visibility="{x:Bind TakenVisibility(ViewModel.Photo), Mode=OneWay, FallbackValue=Collapsed}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE787;" Style="{StaticResource InfoIconStyle}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Uid="InfoTakenLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind TakenText(ViewModel.Photo), Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnSpacing="8" Visibility="{x:Bind LocationVisibility(ViewModel.Photo), Mode=OneWay, FallbackValue=Collapsed}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE707;" Style="{StaticResource InfoIconStyle}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Uid="InfoLocationLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind LocationText(ViewModel.Photo), Mode=OneWay}" IsTextSelectionEnabled="True" />
+                                    <HyperlinkButton x:Uid="OpenMapLink" Padding="0,2" Click="OpenMap_Click" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- File: name, folder, size and format. -->
+                    <Border Style="{StaticResource InfoCardStyle}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8A5;" Style="{StaticResource InfoIconStyle}" />
+                                <TextBlock x:Uid="InfoFileHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock x:Uid="InfoNameLabel" Style="{StaticResource InfoLabelStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.Info.Name, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock x:Uid="InfoFolderLabel" Style="{StaticResource InfoLabelStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.Info.Folder, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                            <Grid ColumnSpacing="12" RowSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <StackPanel>
+                                    <TextBlock x:Uid="InfoDimensionsLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Info.Dimensions, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Uid="InfoSizeLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Info.FileSize, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1">
+                                    <TextBlock x:Uid="InfoFormatLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Info.Format, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="1" Grid.Column="1">
+                                    <TextBlock x:Uid="InfoModifiedLabel" Style="{StaticResource InfoLabelStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Info.Modified, Mode=OneWay}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Compare mode: file name over each pane. -->
+        <Grid x:Name="CompareLabels" VerticalAlignment="Top" Margin="0,40,0,0" Visibility="Collapsed" IsHitTestVisible="False">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border HorizontalAlignment="Center" Padding="10,4" CornerRadius="6" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}">
+                <TextBlock x:Name="PinnedName" Style="{StaticResource CaptionTextBlockStyle}" />
+            </Border>
+            <Border Grid.Column="1" HorizontalAlignment="Center" Padding="10,4" CornerRadius="6" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}">
+                <TextBlock Text="{x:Bind ViewModel.FileName, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" />
+            </Border>
+        </Grid>
+
+        <!-- Crop mode bar. -->
+        <Border x:Name="CropBar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,44,0,0" Padding="16,6,6,6" CornerRadius="8"
+                Visibility="Collapsed" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock x:Uid="CropHint" VerticalAlignment="Center" />
+                <Button x:Uid="CropSaveButton" Style="{StaticResource AccentButtonStyle}" Click="SaveAs_Click" />
+                <Button x:Uid="CropCancelButton" Click="CropCancel_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- Notices ("Saved: x.jpg"). -->
+        <Border x:Name="NoticeToast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Padding="12,8,16,8" CornerRadius="8"
+                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                Visibility="{x:Bind HasText(ViewModel.Notice), Mode=OneWay, FallbackValue=Collapsed}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <FontIcon Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- Keyboard cheat sheet (? / F1). -->
+        <Border x:Name="Shortcuts" Grid.ColumnSpan="2" Visibility="Collapsed" Background="{ThemeResource SmokeFillColorDefaultBrush}" Tapped="Shortcuts_Tapped">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" CornerRadius="12" MaxWidth="560"
+                    Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <TextBlock x:Uid="ShortcutsTitle" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <Grid x:Name="ShortcutGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</Window>
+

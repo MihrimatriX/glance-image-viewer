@@ -1,0 +1,15 @@
+CLSID_WICImagingFactory2
+IWICImagingFactory
+IWICBitmapFrameDecode
+IWICBitmapScaler
+IWICBitmapFlipRotator
+IWICFormatConverter
+IWICColorTransform
+IWICColorContext
+IWICMetadataQueryReader
+IWICStream
+GUID_WICPixelFormat32bppBGRA
+GUID_WICPixelFormat32bppPBGRA
+PropVariantClear
+GUID_ContainerFormatGif
+CoCreateInstance

@@ -1,0 +1,28 @@
+name: benchmarks
+
+# Manual only: shared runners are too noisy to gate PRs on, but good enough to compare two branches.
+on:
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: BenchmarkDotNet filter
+        default: '*'
+
+jobs:
+  run:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: true
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+      - run: dotnet run -c Release --project benchmarks/Glance.Benchmarks -- --filter "$env:FILTER" --exporters github
+        env:
+          FILTER: ${{ inputs.filter }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results
+          path: BenchmarkDotNet.Artifacts/results/

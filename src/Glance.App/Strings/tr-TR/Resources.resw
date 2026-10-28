@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ImageCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Görüntü</value></data>
+  <data name="WelcomeText.Text" xml:space="preserve"><value>Bir görüntüyü buraya bırakın ya da açın.</value></data>
+  <data name="OpenButton.Content" xml:space="preserve"><value>Görüntü aç</value></data>
+  <data name="OpenToolbarButton.Label" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
+  <data name="PrevButton.Label" xml:space="preserve"><value>Önceki (←)</value></data>
+  <data name="NextButton.Label" xml:space="preserve"><value>Sonraki (→)</value></data>
+  <data name="ZoomOutButton.Label" xml:space="preserve"><value>Uzaklaştır (−)</value></data>
+  <data name="ZoomInButton.Label" xml:space="preserve"><value>Yakınlaştır (+)</value></data>
+  <data name="FitButton.Label" xml:space="preserve"><value>Pencereye sığdır (0)</value></data>
+  <data name="RotateButton.Label" xml:space="preserve"><value>Döndür (R)</value></data>
+  <data name="DeleteButton.Label" xml:space="preserve"><value>Sil (Del)</value></data>
+  <data name="InfoButton.Label" xml:space="preserve"><value>Bilgi (I)</value></data>
+  <data name="FullscreenButton.Label" xml:space="preserve"><value>Tam ekran (F11)</value></data>
+  <data name="UndoButton.Content" xml:space="preserve"><value>Geri al</value></data>
+  <data name="InfoNameLabel.Text" xml:space="preserve"><value>Ad</value></data>
+  <data name="InfoFolderLabel.Text" xml:space="preserve"><value>Klasör</value></data>
+  <data name="InfoDimensionsLabel.Text" xml:space="preserve"><value>Boyutlar</value></data>
+  <data name="InfoSizeLabel.Text" xml:space="preserve"><value>Dosya boyutu</value></data>
+  <data name="InfoModifiedLabel.Text" xml:space="preserve"><value>Değiştirilme</value></data>
+  <data name="InfoFormatLabel.Text" xml:space="preserve"><value>Biçim</value></data>
+  <data name="Status_Unsupported" xml:space="preserve"><value>Bu dosya türü desteklenmiyor.</value></data>
+  <data name="Status_Corrupt" xml:space="preserve"><value>Bu görüntü açılamadı. Dosya bozuk ya da eksik olabilir.</value></data>
+  <data name="Status_EmptyFolder" xml:space="preserve"><value>Bu klasörde görüntü kalmadı.</value></data>
+  <data name="Toast_Deleted" xml:space="preserve"><value>Geri Dönüşüm Kutusu&apos;na taşındı: {0}</value></data>
+  <data name="Onboarding_Title" xml:space="preserve"><value>Tüm görüntüleriniz Glance ile açılsın mı?</value></data>
+  <data name="Onboarding_Body11" xml:space="preserve"><value>Windows bu seçimi sizin yapmanızı ister. Varsayılan uygulamalar sayfasında Glance&apos;i bulun ve &quot;Varsayılan olarak ayarla&quot;yı seçin (ya da her görüntü türü için ayrı ayrı seçin).</value></data>
+  <data name="Onboarding_Body10" xml:space="preserve"><value>Windows bu seçimi sizin yapmanızı ister. Varsayılan uygulamalar sayfasında Fotoğraf görüntüleyici girişini seçip Glance&apos;i işaretleyin.</value></data>
+  <data name="Onboarding_Open" xml:space="preserve"><value>Varsayılan uygulamaları aç</value></data>
+  <data name="Onboarding_Later" xml:space="preserve"><value>Şimdi değil</value></data>
+  <data name="RecentHeader.Text" xml:space="preserve"><value>Son açılanlar</value></data>
+  <data name="FilmStrip.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Bu klasördeki görüntüler</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sığdır / %100 (0 / 1)</value></data>
+  <data name="ZoomPercentButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Yakınlaştırma düzeyi</value></data>
+  <data name="PlayButton.Label" xml:space="preserve"><value>Oynat / duraklat (Boşluk)</value></data>
+  <data name="SlideshowButton.Label" xml:space="preserve"><value>Slayt gösterisi (S)</value></data>
+  <data name="ShortcutsTitle.Text" xml:space="preserve"><value>Klavye kısayolları</value></data>
+  <data name="Sc_Navigate" xml:space="preserve"><value>Önceki / sonraki görüntü</value></data>
+  <data name="Sc_FirstLast" xml:space="preserve"><value>Klasördeki ilk / son</value></data>
+  <data name="Sc_Zoom" xml:space="preserve"><value>Uzaklaştır / yakınlaştır (veya fare tekerleği)</value></data>
+  <data name="Sc_FitActual" xml:space="preserve"><value>Pencereye sığdır / gerçek boyut</value></data>
+  <data name="Sc_Rotate" xml:space="preserve"><value>Sağa / sola döndür</value></data>
+  <data name="Sc_Fullscreen" xml:space="preserve"><value>Tam ekran (çıkmak için Esc)</value></data>
+  <data name="Sc_Slideshow" xml:space="preserve"><value>Slayt gösterisi</value></data>
+  <data name="Sc_Ambient" xml:space="preserve"><value>Ortam ışığı aç / kapat</value></data>
+  <data name="Sc_Info" xml:space="preserve"><value>Bilgi paneli</value></data>
+  <data name="Sc_Animation" xml:space="preserve"><value>Oynat / duraklat, önceki / sonraki kare</value></data>
+  <data name="Sc_Delete" xml:space="preserve"><value>Geri Dönüşüm Kutusu&apos;na taşı / geri al</value></data>
+  <data name="Sc_Copy" xml:space="preserve"><value>Görüntüyü kopyala / yolu kopyala</value></data>
+  <data name="Sc_OpenReveal" xml:space="preserve"><value>Aç / Explorer&apos;da göster</value></data>
+  <data name="Sc_Help" xml:space="preserve"><value>Bu liste</value></data>
+  <data name="InfoTakenLabel.Text" xml:space="preserve"><value>Çekim tarihi</value></data>
+  <data name="InfoLocationLabel.Text" xml:space="preserve"><value>Konum</value></data>
+  <data name="OpenMapLink.Content" xml:space="preserve"><value>Haritada aç (tarayıcı)</value></data>
+  <data name="HistogramCanvas.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Histogram</value></data>
+  <data name="SaveRotationButton.Label" xml:space="preserve"><value>Döndürmeyi kaydet</value></data>
+  <data name="CropButton.Label" xml:space="preserve"><value>Kırp (C)</value></data>
+  <data name="SaveAsButton.Label" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
+  <data name="CropHint.Text" xml:space="preserve"><value>Saklanacak alanı sürükleyerek seçin</value></data>
+  <data name="CropSaveButton.Content" xml:space="preserve"><value>Farklı kaydet… (Enter)</value></data>
+  <data name="CropCancelButton.Content" xml:space="preserve"><value>İptal (Esc)</value></data>
+  <data name="SaveAs_Title" xml:space="preserve"><value>Farklı kaydet</value></data>
+  <data name="SaveAs_Format" xml:space="preserve"><value>Biçim</value></data>
+  <data name="SaveAs_Quality" xml:space="preserve"><value>Kalite</value></data>
+  <data name="SaveAs_Width" xml:space="preserve"><value>Genişlik (px)</value></data>
+  <data name="SaveAs_Height" xml:space="preserve"><value>Yükseklik (px)</value></data>
+  <data name="SaveAs_KeepAspect" xml:space="preserve"><value>En-boy oranını koru</value></data>
+  <data name="SaveAs_Save" xml:space="preserve"><value>Kaydet…</value></data>
+  <data name="SaveAs_Cancel" xml:space="preserve"><value>İptal</value></data>
+  <data name="SaveAs_Suffix" xml:space="preserve"><value>-duzenlendi</value></data>
+  <data name="Notice_Saved" xml:space="preserve"><value>Kaydedildi: {0}</value></data>
+  <data name="Notice_SaveFailed" xml:space="preserve"><value>{0} kaydedilemedi</value></data>
+  <data name="Notice_RotationLossless" xml:space="preserve"><value>Döndürme kaydedildi (kayıpsız)</value></data>
+  <data name="Notice_RotationReencoded" xml:space="preserve"><value>Döndürme kaydedildi — orijinal Geri Dönüşüm Kutusu&apos;nda</value></data>
+  <data name="Sc_Crop" xml:space="preserve"><value>Kırp</value></data>
+  <data name="Sc_SaveAs" xml:space="preserve"><value>Farklı kaydet (biçim, boyut, kalite)</value></data>
+  <data name="CompareButton.Label" xml:space="preserve"><value>Yan yana karşılaştır (K)</value></data>
+  <data name="LoupeButton.Label" xml:space="preserve"><value>Büyüteç ve renk seçici (L)</value></data>
+  <data name="Sc_Compare" xml:space="preserve"><value>Karşılaştır: bu görüntüyü sabitle, sağda gez</value></data>
+  <data name="Sc_Loupe" xml:space="preserve"><value>Büyüteç; tıklayınca rengi kopyalar</value></data>
+  <data name="Notice_ColorCopied" xml:space="preserve"><value>{0} kopyalandı</value></data>
+  <data name="OpenToolbarButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aç (Ctrl+O)</value></data>
+  <data name="PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki (←)</value></data>
+  <data name="NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki (→)</value></data>
+  <data name="ZoomOutButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Uzaklaştır (−)</value></data>
+  <data name="ZoomInButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Yakınlaştır (+)</value></data>
+  <data name="FitButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Pencereye sığdır (0)</value></data>
+  <data name="RotateButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Döndür (R)</value></data>
+  <data name="DeleteButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sil (Del)</value></data>
+  <data name="InfoButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Bilgi (I)</value></data>
+  <data name="FullscreenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Tam ekran (F11)</value></data>
+  <data name="PlayButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Oynat / duraklat (Boşluk)</value></data>
+  <data name="SlideshowButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Slayt gösterisi (S)</value></data>
+  <data name="SaveRotationButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Döndürmeyi kaydet</value></data>
+  <data name="CropButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Kırp (C)</value></data>
+  <data name="SaveAsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Farklı kaydet (Ctrl+S)</value></data>
+  <data name="CompareButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Yan yana karşılaştır (K)</value></data>
+  <data name="LoupeButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Büyüteç ve renk seçici (L)</value></data>
+  <data name="ThemeLabel.Text" xml:space="preserve"><value>Renk teması</value></data>
+  <data name="HarmonyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Renk uyumu</value></data>
+  <data name="Harmony_Complementary" xml:space="preserve"><value>Tamamlayıcı</value></data>
+  <data name="Harmony_Analogous" xml:space="preserve"><value>Analog</value></data>
+  <data name="Harmony_Triad" xml:space="preserve"><value>Üçlü</value></data>
+  <data name="Harmony_SplitComplementary" xml:space="preserve"><value>Bölünmüş tamamlayıcı</value></data>
+  <data name="Harmony_Square" xml:space="preserve"><value>Kare</value></data>
+  <data name="Harmony_Monochrome" xml:space="preserve"><value>Monokrom</value></data>
+  <data name="MenuCopy.Text" xml:space="preserve"><value>Resmi kopyala</value></data>
+  <data name="MenuCopyPath.Text" xml:space="preserve"><value>Dosya yolunu kopyala</value></data>
+  <data name="MenuReveal.Text" xml:space="preserve"><value>Dosya Gezgini'nde göster</value></data>
+  <data name="MenuRotate.Text" xml:space="preserve"><value>Döndür</value></data>
+  <data name="MenuCrop.Text" xml:space="preserve"><value>Kırp</value></data>
+  <data name="MenuSaveAs.Text" xml:space="preserve"><value>Farklı kaydet…</value></data>
+  <data name="MenuWallpaper.Text" xml:space="preserve"><value>Masaüstü arka planı yap</value></data>
+  <data name="MenuShare.Text" xml:space="preserve"><value>Paylaş…</value></data>
+  <data name="MenuPrint.Text" xml:space="preserve"><value>Yazdır…</value></data>
+  <data name="MenuInfo.Text" xml:space="preserve"><value>Bilgi</value></data>
+  <data name="MenuDelete.Text" xml:space="preserve"><value>Geri Dönüşüm Kutusu'na taşı</value></data>
+  <data name="Notice_WallpaperSet" xml:space="preserve"><value>Masaüstü arka planı ayarlandı</value></data>
+  <data name="Notice_WallpaperFailed" xml:space="preserve"><value>Masaüstü arka planı ayarlanamadı</value></data>
+  <data name="Notice_PrintFailed" xml:space="preserve"><value>Yazdırma açılamadı</value></data>
+  <data name="Sc_Print" xml:space="preserve"><value>Yazdır</value></data>
+  <data name="Sc_DragOut" xml:space="preserve"><value>Dosyayı başka uygulamaya sürükle</value></data>
+  <data name="InfoTitle.Text" xml:space="preserve"><value>Ayrıntılar</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Kapat (I)</value></data>
+  <data name="InfoCloseButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Ayrıntıları kapat</value></data>
+  <data name="InfoFileHeader.Text" xml:space="preserve"><value>Dosya</value></data>
+  <data name="ThemeExportText.Text" xml:space="preserve"><value>Dışa aktar</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Renk temasının tamamını CSS, Tailwind, SCSS, JSON veya hex listesi olarak kopyala ya da kaydet</value></data>
+  <data name="ThemeExportButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Renk temasını dışa aktar</value></data>
+  <data name="ThemeCopyMenu.Text" xml:space="preserve"><value>Kopyala</value></data>
+  <data name="ThemeSaveMenu.Text" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="ThemeHexList.Text" xml:space="preserve"><value>Hex listesi</value></data>
+  <data name="ThemeSaveHexList.Text" xml:space="preserve"><value>Hex listesi (.txt)…</value></data>
+  <data name="Notice_ThemeCopied" xml:space="preserve"><value>Renk teması {0} olarak kopyalandı</value></data>
+  <data name="Swatch_Tooltip" xml:space="preserve"><value>{0} · kopyalamak için tıklayın</value></data>
+  <data name="Theme_FileSuffix" xml:space="preserve"><value>-tema</value></data>
+  <data name="WelcomeHint.Text" xml:space="preserve"><value>HEIC, AVIF, WebP, JPEG XL, RAW, PSD, PDF ve daha fazlası · kısayollar için ? tuşuna basın</value></data>
+</root>

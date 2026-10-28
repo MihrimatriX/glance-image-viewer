@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glance — image viewer for Windows</title>
+<meta name="description" content="A fast, free and open-source image viewer for Windows 10 and 11. Opens HEIC, AVIF, WebP, JPEG XL, camera RAW and PSD with nothing else to install.">
+<link rel="canonical" href="https://mihrimatrix.github.io/glance-image-viewer/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Glance">
+<meta property="og:url" content="https://mihrimatrix.github.io/glance-image-viewer/">
+<meta property="og:title" content="Glance — image viewer for Windows">
+<meta property="og:description" content="Install once, open everything instantly. Free and open source.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="tr_TR">
+<!-- Link previews need absolute image URLs. -->
+<meta property="og:image" content="https://mihrimatrix.github.io/glance-image-viewer/screenshot.jpg">
+<meta property="og:image:width" content="1493">
+<meta property="og:image:height" content="1023">
+<meta property="og:image:alt" content="Glance showing a camera RAW photo with ambient light and the filmstrip">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#111318">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Glance",
+  "description": "A fast, free and open-source image viewer for Windows 10 and 11. Opens HEIC, AVIF, WebP, JPEG XL, camera RAW and PSD with nothing else to install.",
+  "url": "https://mihrimatrix.github.io/glance-image-viewer/",
+  "downloadUrl": "https://github.com/MihrimatriX/glance-image-viewer/releases/latest",
+  "image": "https://mihrimatrix.github.io/glance-image-viewer/screenshot.jpg",
+  "screenshot": "https://mihrimatrix.github.io/glance-image-viewer/screenshot.jpg",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Windows 10, Windows 11",
+  "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F4F5F7; --surface: #FFFFFF; --sunk: #EBEDF0;
+    --ink: #1A1C22; --graphite: #5D626D; --rule: #DCDFE5; --accent: #4F52D9;
+    --stage: #111318; --stage-ink: #F2F3F5; --stage-muted: #A3A8B3; --stage-rule: #262A32;
+    --sans: 'Schibsted Grotesk', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15171C; --surface: #1C1F25; --sunk: #23262D;
+      --ink: #ECEDEF; --graphite: #9BA0AA; --rule: #2A2E36; --accent: #A3A6FF;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font: 17px/1.6 var(--sans); color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; }
+  img { display: block; max-width: 100%; height: auto; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- darkroom: nav + hero ---------- */
+  .darkroom { background: var(--stage); color: var(--stage-ink); --accent: #A3A6FF; overflow: hidden; }
+  nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--stage) 82%, transparent);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--stage-rule); color: var(--stage-ink); --accent: #A3A6FF; }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; text-decoration: none; }
+  .brand img { width: 28px; height: 28px; }
+  .links { display: flex; gap: 26px; margin-left: auto; font-size: 15px; }
+  .links a { text-decoration: none; color: var(--stage-muted); transition: color .2s; }
+  .links a:hover { color: var(--stage-ink); }
+  .lang { font: 500 13px var(--sans); color: var(--stage-muted); background: none; border: 1px solid var(--stage-rule);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  .lang:hover { color: var(--stage-ink); }
+
+  .hero { padding: 72px 0 0; }
+  .hero-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 48px; align-items: end; }
+  h1 { font-weight: 800; font-size: clamp(44px, 6.4vw, 84px); line-height: .98; letter-spacing: -0.045em; max-width: 13ch; }
+  .lede { font-size: 19px; color: var(--stage-muted); max-width: 30rem; margin-top: 28px; }
+  .hero-cta { display: grid; gap: 14px; justify-items: start; padding-bottom: 6px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 10px; font: 600 16px var(--sans);
+    text-decoration: none; border: 0; cursor: pointer; transition: background .2s, transform .1s; }
+  .btn:active { transform: scale(.98); }
+  .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .btn-light { background: var(--stage-ink); color: var(--stage); }
+  .btn-light:hover { background: #fff; }
+  .hero-meta { font-size: 14px; color: var(--stage-muted); }
+  .hero-meta a { color: var(--stage-ink); }
+
+  /* the app paints ambient light from the photo around it; the page does the same with a blurred copy */
+  .stage { position: relative; margin-top: 56px; isolation: isolate; }
+  .aura { position: absolute; top: -6%; left: -8%; width: 116%; height: 112%; max-width: none; object-fit: cover; z-index: -1;
+    filter: blur(90px) saturate(1.8); opacity: .6; animation: breathe 10s ease-in-out infinite alternate; }
+  @keyframes breathe { from { opacity: .45; transform: scale(.97); } to { opacity: .7; transform: scale(1.02); } }
+  .shot { width: 100%; border-radius: 14px 14px 0 0; border: 1px solid #2E323B; border-bottom: 0;
+    box-shadow: 0 -30px 80px -40px rgba(0,0,0,.8); }
+
+  .rise { animation: rise .9s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+
+  /* ---------- light sections ---------- */
+  .band { padding: 120px 0; border-top: 1px solid var(--rule); }
+  .band:first-of-type { border-top: 0; }
+  .split { display: grid; grid-template-columns: 1fr 1.6fr; gap: 64px; }
+  .split > header { align-self: start; position: sticky; top: 96px; }
+  h2 { font-weight: 800; font-size: clamp(34px, 4.6vw, 54px); line-height: 1.02; letter-spacing: -0.035em; }
+  .sub { color: var(--graphite); margin-top: 18px; max-width: 26rem; }
+
+  .features { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+  .feature { padding: 28px 0; border-top: 1px solid var(--rule); }
+  .feature svg { width: 22px; height: 22px; color: var(--accent); }
+  .feature h3 { font-size: 18px; font-weight: 600; margin: 14px 0 6px; letter-spacing: -0.01em; }
+  .feature p { color: var(--graphite); font-size: 16px; }
+
+  .formats { border-top: 1px solid var(--rule); }
+  .fmt-row { display: grid; grid-template-columns: 170px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+  .fmt-row dt { font-weight: 600; }
+  .fmt-row dd { color: var(--graphite); }
+  .fmt-row dd b { color: var(--ink); font-weight: 600; }
+
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+  .key { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--rule); font-size: 16px; }
+  .key span:last-child { display: flex; gap: 4px; flex-shrink: 0; }
+  kbd { font: 13px var(--mono); min-width: 28px; text-align: center; padding: 3px 7px; border: 1px solid var(--rule); border-bottom-width: 2px;
+    border-radius: 5px; background: var(--surface); }
+  code { font: .86em var(--mono); padding: 1px 5px; border-radius: 4px; background: var(--sunk); }
+
+  /* ---------- install ---------- */
+  .install { background: var(--surface); }
+  .picker { display: grid; gap: 28px; }
+  .picker fieldset { border: 0; display: grid; gap: 12px; }
+  .picker legend { font-weight: 600; margin-bottom: 12px; }
+  .seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: 12px; background: var(--sunk); justify-self: start; }
+  .opt { position: relative; cursor: pointer; }
+  .opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg .opt span { display: block; padding: 9px 18px; border-radius: 9px; color: var(--graphite); font-weight: 500; transition: background .15s, color .15s; }
+  .seg .opt input:checked + span { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(20,22,30,.12); }
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .kinds .opt span { display: block; height: 100%; padding: 20px 22px; border: 1px solid var(--rule); border-radius: 12px; transition: border-color .15s, box-shadow .15s; }
+  .kinds .opt b { display: block; font-weight: 600; margin-bottom: 4px; }
+  .kinds .opt small { display: block; color: var(--graphite); font-size: 15px; line-height: 1.5; }
+  .kinds .opt input:checked + span { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { font-size: 14px; color: var(--graphite); }
+  .get { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-top: 8px; }
+  .btn-ink { background: var(--ink); color: var(--paper); }
+  .btn-ink:hover { background: color-mix(in srgb, var(--ink) 85%, var(--paper)); }
+  .file { font: 14px var(--mono); color: var(--graphite); word-break: break-all; }
+
+  .steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 88px; }
+  .steps li { counter-increment: step; border-top: 2px solid var(--ink); padding-top: 18px; }
+  .steps li::before { content: counter(step); display: block; font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: -0.04em; margin-bottom: 14px; }
+  .steps h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .steps p { color: var(--graphite); font-size: 16px; }
+
+  details { border-bottom: 1px solid var(--rule); }
+  summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 16px; padding: 22px 0; font-weight: 600; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; font-size: 22px; line-height: 1; color: var(--graphite); transition: transform .2s; }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { color: var(--graphite); padding-bottom: 22px; max-width: 40rem; }
+  .faq { border-top: 1px solid var(--rule); }
+
+  footer { border-top: 1px solid var(--rule); padding: 36px 0; font-size: 15px; color: var(--graphite); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (prefers-reduced-motion: reduce) { .rise, .aura { animation: none; } html { scroll-behavior: auto; } }
+
+  @media (max-width: 860px) {
+    .wrap { padding: 0 16px; }
+    .links a:not(.keep) { display: none; }
+    .hero { padding-top: 56px; }
+    .hero-grid, .split { grid-template-columns: 1fr; gap: 32px; }
+    .split > header { position: static; }
+    .stage { margin-top: 48px; }
+    .band { padding: 80px 0; }
+    .features, .keys, .kinds, .steps { grid-template-columns: 1fr; }
+    .steps { gap: 28px; margin-top: 64px; }
+    .fmt-row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="logo.svg" alt="">Glance</a>
+      <div class="links">
+        <a href="#features" data-tr="Özellikler">Features</a>
+        <a href="#formats" data-tr="Formatlar">Formats</a>
+        <a href="#shortcuts" data-tr="Kısayollar">Shortcuts</a>
+        <a class="keep" href="#install" data-tr="İndir">Download</a>
+        <a href="https://github.com/MihrimatriX/glance-image-viewer">GitHub</a>
+      </div>
+      <button class="lang" id="lang" type="button" aria-label="Switch language">TR</button>
+    </div>
+  </nav>
+
+<div class="darkroom">
+  <header class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <h1 class="rise" data-tr="Bir kez kur, her şeyi anında aç.">Install once, open everything instantly.</h1>
+          <p class="lede rise" style="--i:1" data-tr="Windows 10 ve 11 için ücretsiz, açık kaynak bir görüntüleyici. iPhone'daki HEIC'ten fotoğraf makinesi RAW'ına kadar Windows'un açamadığını açar; codec eklentisi, hesap ya da internet gerekmez.">A free, open-source viewer for Windows 10 and 11. It opens what Windows can't, from iPhone HEIC to camera RAW, with no codec extensions, no account and no network access.</p>
+        </div>
+        <div class="hero-cta rise" style="--i:2">
+          <a class="btn btn-light" data-dl href="https://github.com/MihrimatriX/glance-image-viewer/releases/latest">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.25 1.5h1.5v7.19l2.47-2.47 1.06 1.06L8 11.56 3.72 7.28l1.06-1.06 2.47 2.47V1.5ZM2 13h12v1.5H2V13Z"/></svg>
+            <span data-tr="Windows için indir">Download for Windows</span>
+          </a>
+          <p class="hero-meta"><span id="hero-meta"></span> <a href="#install" data-tr="Diğer seçenekler">Other options</a></p>
+        </div>
+      </div>
+      <div class="stage rise" style="--i:3">
+        <img class="aura" src="screenshot.jpg" alt="" aria-hidden="true">
+        <img class="shot" src="screenshot.jpg" width="1493" height="1023" alt="Glance showing a camera RAW photo with ambient light and the filmstrip" data-tr-alt="Ortam ışığı ve film şeridiyle bir RAW fotoğrafı gösteren Glance">
+      </div>
+    </div>
+  </header>
+</div>
+
+<main>
+<section class="band" id="features">
+  <div class="wrap split">
+    <header>
+      <h2 data-tr="Bir görüntüleyicinin yapması gereken her şey.">Everything a viewer should do.</h2>
+      <p class="sub" data-tr="Glance tek bir işi iyi yapar: fotoğrafı açar ve yolundan çekilir.">Glance does one job well: it opens your photo and gets out of the way.</p>
+    </header>
+    <div class="features">
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        <h3 data-tr="Windows'un açamadıklarını açar">Opens what Windows can't</h3>
+        <p data-tr="HEIC, AVIF, JPEG XL, RAW, PSD ve HDR. Tüm çözücüler pakete dahil, Store'dan eklenti kurman gerekmez.">HEIC, AVIF, JPEG XL, RAW, PSD and HDR. Every decoder is bundled, so there's nothing to buy from the Store.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
+        <h3 data-tr="Hızlı">Fast</h3>
+        <p data-tr="Ekran boyutunda çözülür, GPU'da çizilir. Gezindiğin yöndeki sonraki 16 fotoğraf önceden hazırlanır.">Decoded at screen size, drawn on the GPU. The next 16 photos in your direction are ready before you get there.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <h3 data-tr="Gizli">Private</h3>
+        <p data-tr="Telemetri yok, hesap yok, ağ bağlantısı yok. Fotoğrafların bilgisayarından çıkmaz.">No telemetry, no account, no network connections. Your photos never leave your PC.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <h3 data-tr="Explorer küçük resimleri">Explorer thumbnails</h3>
+        <p data-tr="Windows'un boş ikon gösterdiği HEIC, RAW ve diğer formatlar Dosya Gezgini'nde de görünür.">HEIC, RAW and the other formats Windows shows as blank icons get real previews in File Explorer.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        <h3 data-tr="Güvenli düzenleme">Safe editing</h3>
+        <p data-tr="Kırp, döndür, farklı kaydet. Orijinal habersizce değişmez; silinen dosya 5 saniye içinde geri alınabilir.">Crop, rotate, save as. Originals are never overwritten silently, and deletes have a 5-second undo.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+        <h3 data-tr="Karşılaştırma ve büyüteç">Compare and loupe</h3>
+        <p data-tr="İki fotoğrafı senkron yakınlaştırmayla yan yana koy. 8 kat büyüteç bir pikselin rengini <code>#RRGGBB</code> olarak kopyalar.">Two photos side by side with synchronised zoom. An 8× loupe copies any pixel's colour as <code>#RRGGBB</code>.</p>
+      </article>
+      <article class="feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <h3 data-tr="Bilgi paneli">Info panel</h3>
+        <p data-tr="Canlı RGB histogram, makine, lens, pozlama, çekim tarihi ve GPS. ICC profilleri doğru renge çevrilir.">Live RGB histogram, camera, lens, exposure, date taken and GPS. ICC profiles are colour-managed to sRGB.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="formats">
+  <div class="wrap split">
+    <header>
+      <h2 data-tr="Fotoğraf makineni de getir.">Bring your camera too.</h2>
+      <p class="sub" data-tr="RAW dosyalarında makinenin önizlemesi anında açılır, yakınlaştırınca tam RAW işleme devreye girer.">RAW files open instantly with the camera's own preview; full RAW development kicks in when you zoom.</p>
+    </header>
+    <dl class="formats">
+      <div class="fmt-row"><dt data-tr="Günlük">Everyday</dt><dd>JPEG, PNG, GIF, BMP, TIFF, ICO</dd></div>
+      <div class="fmt-row"><dt data-tr="Modern">Modern</dt><dd><b>HEIC / HEIF</b>, <b>AVIF</b>, <b>WebP</b>, <b>JPEG XL</b>, JPEG XR, JPEG 2000, QOI</dd></div>
+      <div class="fmt-row"><dt>Camera RAW</dt><dd>CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, SRW, 3FR, IIQ, X3F <span data-tr="ve fazlası">and more</span></dd></div>
+      <div class="fmt-row"><dt data-tr="Profesyonel">Pro and creative</dt><dd>PSD / PSB, TGA, EXR, Radiance HDR, SVG, DDS, PCX, PNM</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="band" id="shortcuts">
+  <div class="wrap split">
+    <header>
+      <h2 data-tr="Elini klavyeden kaldırmadan.">Hands on the keyboard.</h2>
+      <p class="sub" data-tr="Uygulamada <kbd>?</kbd> tuşuna basınca tüm kısayollar görünür.">Press <kbd>?</kbd> in the app to see them all.</p>
+    </header>
+    <div class="keys">
+      <div class="key"><span data-tr="Önceki / sonraki">Previous / next</span><span><kbd>←</kbd><kbd>→</kbd></span></div>
+      <div class="key"><span data-tr="Sığdır / gerçek boyut">Fit / actual size</span><span><kbd>0</kbd><kbd>1</kbd></span></div>
+      <div class="key"><span data-tr="Tam ekran">Full screen</span><span><kbd>F</kbd></span></div>
+      <div class="key"><span data-tr="Döndür">Rotate</span><span><kbd>R</kbd></span></div>
+      <div class="key"><span data-tr="Slayt gösterisi">Slideshow</span><span><kbd>S</kbd></span></div>
+      <div class="key"><span data-tr="Bilgi paneli">Info panel</span><span><kbd>I</kbd></span></div>
+      <div class="key"><span data-tr="Karşılaştır">Compare</span><span><kbd>K</kbd></span></div>
+      <div class="key"><span data-tr="Büyüteç">Loupe</span><span><kbd>L</kbd></span></div>
+      <div class="key"><span data-tr="Kırp">Crop</span><span><kbd>C</kbd></span></div>
+      <div class="key"><span data-tr="Farklı kaydet">Save as</span><span><kbd>Ctrl</kbd><kbd>S</kbd></span></div>
+      <div class="key"><span data-tr="Geri Dönüşüm Kutusu'na taşı">Move to Recycle Bin</span><span><kbd>Del</kbd></span></div>
+      <div class="key"><span data-tr="Geri al">Undo</span><span><kbd>Ctrl</kbd><kbd>Z</kbd></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band install" id="install">
+  <div class="wrap">
+    <div class="split">
+      <header>
+        <h2 data-tr="Glance'i indir.">Get Glance.</h2>
+        <p class="sub" data-tr="Bilgisayarına uygun sürüm seçili geliyor. Yaklaşık 30 MB, kurulum bir dakikadan kısa sürer.">The right build for your PC is picked for you. About 30 MB, and setup takes under a minute.</p>
+      </header>
+      <form class="picker" id="picker">
+        <fieldset>
+          <legend data-tr="İşlemci">Processor</legend>
+          <div class="seg">
+            <label class="opt"><input type="radio" name="arch" value="x64" checked><span>x64</span></label>
+            <label class="opt"><input type="radio" name="arch" value="arm64"><span>ARM64</span></label>
+          </div>
+          <p class="hint" data-tr="Çoğu bilgisayar x64'tür. Snapdragon işlemcili dizüstüler ve Surface Pro X ARM64'tür.">Most PCs are x64. Snapdragon laptops and the Surface Pro X are ARM64.</p>
+        </fieldset>
+        <fieldset>
+          <legend data-tr="Paket">Package</legend>
+          <div class="kinds">
+            <label class="opt"><input type="radio" name="kind" value="setup.exe" checked><span>
+              <b data-tr="Kurulum (önerilen)">Installer (recommended)</b>
+              <small data-tr="Başlat menüsüne ve “Birlikte aç”a eklenir. Yalnızca senin kullanıcın için kurulur, yönetici izni istemez.">Adds Glance to Start and <em>Open with</em>. Installs for your user only, no admin rights.</small>
+            </span></label>
+            <label class="opt"><input type="radio" name="kind" value="portable.zip"><span>
+              <b data-tr="Taşınabilir zip">Portable zip</b>
+              <small data-tr="Herhangi bir klasörden çalışır. Sen kaydedene kadar sisteme dokunmaz.">Runs from any folder. Touches nothing on your system until you register it.</small>
+            </span></label>
+          </div>
+        </fieldset>
+        <div class="get">
+          <a class="btn btn-ink" data-dl href="https://github.com/MihrimatriX/glance-image-viewer/releases/latest">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.25 1.5h1.5v7.19l2.47-2.47 1.06 1.06L8 11.56 3.72 7.28l1.06-1.06 2.47 2.47V1.5ZM2 13h12v1.5H2V13Z"/></svg>
+            <span id="dl-label">Download</span>
+          </a>
+          <span class="file" id="dl-file"></span>
+        </div>
+      </form>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <h3 data-tr="İndir">Download</h3>
+        <p data-tr="Yukarıdan işlemcini ve paketi seç. Tüm sürümler <a href=https://github.com/MihrimatriX/glance-image-viewer/releases>GitHub Releases</a> sayfasında.">Pick your processor and package above. Every version is on <a href=https://github.com/MihrimatriX/glance-image-viewer/releases>GitHub Releases</a>.</p>
+      </li>
+      <li>
+        <h3 data-tr="Çalıştır">Run it</h3>
+        <p data-tr="Kurulumu aç ya da zip'i çıkarıp <code>Glance.exe</code>'yi çalıştır. Dosya henüz imzalı olmadığı için SmartScreen uyarırsa <b>Ek bilgi</b>, ardından <b>Yine de çalıştır</b>'ı seç.">Open the setup, or unzip and run <code>Glance.exe</code>. The file isn't code-signed yet, so if SmartScreen warns, choose <b>More info</b>, then <b>Run anyway</b>.</p>
+      </li>
+      <li>
+        <h3 data-tr="Varsayılan yap">Make it your default</h3>
+        <p data-tr="İlk açılışta Glance, Ayarlar › Varsayılan uygulamalar sayfasını kendi bölümünde açmayı önerir. Orada Glance'i seç.">On first launch Glance offers to open <em>Settings › Default apps</em> at its own entry. Choose Glance there.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="band" id="faq">
+  <div class="wrap split">
+    <header>
+      <h2 data-tr="Sık sorulanlar">Questions</h2>
+    </header>
+    <div class="faq">
+      <details>
+        <summary data-tr="İndirdiğim dosya güvenli mi?">Is the download safe?</summary>
+        <p data-tr="Her sürüm bu herkese açık depodan GitHub Actions ile derlenir; her dosyanın derleme kaydını kontrol edebilirsin. Kod imzası eklenene kadar SmartScreen yeni dosyalar için uyarı gösterir.">Every release is built from this public repository by GitHub Actions, and you can check the build log for each file. Until the installer is code-signed, SmartScreen warns about new downloads.</p>
+      </details>
+      <details>
+        <summary data-tr="Gereksinimler neler?">What are the requirements?</summary>
+        <p data-tr="Windows 10 sürüm 1809 veya üstü ya da Windows 11. Başka hiçbir şey gerekmez; .NET çalışma zamanı ve tüm çözücüler pakete dahil.">Windows 10 version 1809 or later, or Windows 11. Nothing else: the .NET runtime and every decoder are included.</p>
+      </details>
+      <details>
+        <summary data-tr="Taşınabilir sürümü Birlikte aç menüsüne nasıl eklerim?">How do I add the portable build to Open with?</summary>
+        <p data-tr="<code>Glance.exe --register</code> komutunu çalıştır. Yalnızca senin kullanıcın için kaydeder, yönetici izni gerekmez.">Run <code>Glance.exe --register</code>. It registers for your user only and needs no admin rights.</p>
+      </details>
+      <details>
+        <summary data-tr="Nasıl kaldırılır?">How do I uninstall it?</summary>
+        <p data-tr="Diğer uygulamalar gibi Ayarlar › Uygulamalar'dan. Taşınabilir sürümde <code>Glance.exe --unregister</code> tüm entegrasyonu kaldırır, sonra klasörü silebilirsin.">From <em>Settings › Apps</em>, like any other app. For the portable build, <code>Glance.exe --unregister</code> removes the integration; then delete the folder.</p>
+      </details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span data-tr="Glance, GPL-3.0 lisanslı özgür yazılımdır.">Glance is free software under the GPL-3.0.</span>
+    <span><a href="https://github.com/MihrimatriX/glance-image-viewer">GitHub</a>, <a href="https://github.com/MihrimatriX/glance-image-viewer/issues" data-tr="Hata bildir">Report a bug</a></span>
+  </div>
+</footer>
+
+<script>
+  const REPO = 'MihrimatriX/glance-image-viewer';
+  const LATEST = `https://github.com/${REPO}/releases/latest`;
+  const T = {
+    en: {
+      button: kind => kind === 'setup.exe' ? 'Download installer' : 'Download portable zip',
+      meta: (v, arch, size) => `Version ${v} for ${arch}, ${size}.`,
+      offline: 'Free, for Windows 10 and 11.',
+      all: 'See all files on GitHub Releases',
+    },
+    tr: {
+      button: kind => kind === 'setup.exe' ? 'Kurulumu indir' : 'Taşınabilir zip\'i indir',
+      meta: (v, arch, size) => `${arch} için sürüm ${v}, ${size}.`,
+      offline: 'Ücretsiz, Windows 10 ve 11 için.',
+      all: 'Tüm dosyalar GitHub Releases\'ta',
+    },
+  };
+  const form = document.getElementById('picker');
+  let release = null; // { version, assets: Map<file name, { url, size }> }
+
+  function render() {
+    const lang = document.documentElement.lang === 'tr' ? 'tr' : 'en';
+    const t = T[lang], arch = form.arch.value, kind = form.kind.value;
+    const name = release && `Glance-${release.version}-${arch}-${kind}`;
+    const asset = release?.assets.get(name);
+    const size = asset && new Intl.NumberFormat(lang, { style: 'unit', unit: 'megabyte', maximumFractionDigits: 0 }).format(asset.size / 1e6);
+    const archLabel = arch === 'arm64' ? 'ARM64' : 'x64';
+    document.querySelectorAll('[data-dl]').forEach(a => a.href = asset?.url ?? LATEST);
+    document.getElementById('dl-label').textContent = t.button(kind);
+    document.getElementById('dl-file').textContent = asset ? `${name}, ${size}` : t.all;
+    document.getElementById('hero-meta').textContent = asset ? t.meta(release.version, archLabel, size) : t.offline;
+  }
+  form.addEventListener('change', render);
+  form.addEventListener('submit', e => e.preventDefault());
+
+  // The asset names come from release.yml: Glance-<version>-<arch>-setup.exe / -portable.zip.
+  // If the API is unreachable or rate-limited, the buttons keep pointing at the latest release page.
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(r => {
+      release = { version: r.tag_name.replace(/^v/, ''), assets: new Map(r.assets.map(a => [a.name, { url: a.browser_download_url, size: a.size }])) };
+      render();
+    })
+    .catch(() => {});
+
+  // Resolves to 'x64' or 'arm64' for the visitor's PC; the picker starts on that choice.
+  async function detectArch() {
+    // Only Chromium exposes the CPU (UA client hints); elsewhere x64 is the safe default.
+    try {
+      const { architecture } = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+      return architecture === 'arm' ? 'arm64' : 'x64';
+    } catch {
+      return 'x64';
+    }
+  }
+  detectArch().then(arch => { form.arch.value = arch; render(); });
+
+  // English lives in the markup, Turkish in data-tr; the first switch remembers the English.
+  const btn = document.getElementById('lang');
+  function setLang(lang) {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-tr]').forEach(el => {
+      el.dataset.en ??= el.innerHTML;
+      el.innerHTML = lang === 'tr' ? el.dataset.tr : el.dataset.en;
+    });
+    document.querySelectorAll('[data-tr-alt]').forEach(el => {
+      el.dataset.enAlt ??= el.alt;
+      el.alt = lang === 'tr' ? el.dataset.trAlt : el.dataset.enAlt;
+    });
+    btn.textContent = lang === 'tr' ? 'EN' : 'TR';
+    try { localStorage.setItem('lang', lang); } catch {}
+    render();
+  }
+  btn.addEventListener('click', () => setLang(document.documentElement.lang === 'tr' ? 'en' : 'tr'));
+  let saved = null;
+  try { saved = localStorage.getItem('lang'); } catch {}
+  if ((saved ?? navigator.language.slice(0, 2)) === 'tr') setLang('tr'); else render();
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(WindowsTfm)</TargetFramework>
+    <TargetPlatformMinVersion>$(WindowsMinVersion)</TargetPlatformMinVersion>
+    <RootNamespace>Glance.App</RootNamespace>
+    <AssemblyName>Glance</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWinUI>true</UseWinUI>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Program.Main handles single-instance redirection before XAML starts. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <!-- Default build is unpackaged (portable). Packaged: dotnet build -p:WindowsPackageType=MSIX (see README). -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Ship the .NET runtime too: a clean Windows install has no .NET 10 (R2 spirit: nothing else to install). -->
+    <SelfContained>true</SelfContained>
+    <!-- Release publish: trimmed, EN/TR only. All COM goes through source-generated ComWrappers (trim-safe). -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SatelliteResourceLanguages>en;tr</SatelliteResourceLanguages>
+    <ApplicationIcon>Assets\Glance.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Component packages instead of the Microsoft.WindowsAppSDK metapackage: skips AI/ML/Widgets/Search. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**" Exclude="Assets\logo.svg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Glance.Core\Glance.Core.csproj" />
+    <ProjectReference Include="..\Glance.Imaging\Glance.Imaging.csproj" />
+  </ItemGroup>
+
+  <!-- Packaged builds and release publishes carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, next to Glance.exe. -->
+  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(WindowsPackageType)' == 'MSIX' or '$(_IsPublishing)' == 'true'">
+    <PropertyGroup>
+      <ThumbsDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)thumbs\</ThumbsDir>
+    </PropertyGroup>
+    <!-- Glance.App doesn't reference the handler, so a clean clone has never restored it. RuntimeIdentifiers in its
+         project covers both RIDs; the extra property keeps this evaluation apart from the Publish one below. -->
+    <MSBuild Projects="..\Glance.Thumbnails\Glance.Thumbnails.csproj" Targets="Restore"
+             Properties="Configuration=$(Configuration);_GlanceThumbsRestore=true"
+             RemoveProperties="OutDir;WindowsPackageType;RuntimeIdentifier;SelfContained" />
+    <MSBuild Projects="..\Glance.Thumbnails\Glance.Thumbnails.csproj" Targets="Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;_IsPublishing=true;PublishDir=$(ThumbsDir)"
+             RemoveProperties="OutDir;WindowsPackageType" />
+    <ItemGroup>
+      <Content Include="$(ThumbsDir)Glance.Thumbnails.dll" Link="Glance.Thumbnails.dll" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>
