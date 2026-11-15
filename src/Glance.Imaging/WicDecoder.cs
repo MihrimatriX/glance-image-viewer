@@ -7,8 +7,8 @@ using Windows.Win32.System.Variant;
 namespace Glance.Imaging;
 
 /// <summary>
-/// Formats every Windows 10/11 install decodes on its own. Nothing that needs a Store codec extension comes here
-/// (ADR 0010): HEIC/AVIF, WebP and JXL go to the bundled decoders, so every machine shows the same thing.
+/// Formats every Windows 10/11 install decodes on its own. Nothing that needs a Store codec extension comes here:
+/// HEIC/AVIF, WebP and JXL go to the bundled decoders, so every machine shows the same thing.
 /// </summary>
 public sealed class WicDecoder : IImageDecoder
 {
@@ -71,7 +71,7 @@ public sealed class WicDecoder : IImageDecoder
             uint ow = swapped ? h : w, oh = swapped ? w : h;
             var scale = Math.Min(1.0, Math.Min((options.MaxWidth ?? (double)ow) / ow, (options.MaxHeight ?? (double)oh) / oh));
 
-            // Scaler sits directly on the frame so JPEG can use its DCT-domain downscale (ADR 0005).
+            // Scaler sits directly on the frame so JPEG can use its DCT-domain downscale.
             IWICBitmapSource src = frame;
             uint sw = Math.Max(1, (uint)Math.Round(w * scale)), sh = Math.Max(1, (uint)Math.Round(h * scale));
             if (sw != w || sh != h)
@@ -192,7 +192,7 @@ public sealed class WicDecoder : IImageDecoder
         }
     }
 
-    // EXIF orientation -> WIC transform. WIC flips first, then rotates clockwise (pinned by OrientationTests).
+    // EXIF orientation -> WIC transform. WIC flips first, then rotates clockwise.
     private static WICBitmapTransformOptions ToTransform(ushort orientation) => orientation switch
     {
         2 => WICBitmapTransformOptions.WICBitmapTransformFlipHorizontal,

@@ -7,5 +7,5 @@ if ($Ref -match '^refs/tags/v(\d+\.\d+\.\d+)$') {
     [xml]$props = Get-Content (Join-Path $PSScriptRoot '..\Directory.Build.props')
     $v = @($props.Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
 }
-if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$v' is not x.y.z (the Store needs four numeric parts ending in .0)" }
+if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$v' is not x.y.z" }
 "VERSION=$v"

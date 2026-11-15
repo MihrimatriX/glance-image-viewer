@@ -103,7 +103,7 @@ public sealed class ImageLoader
                 DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
             var bitmap = Upload(decoded.Pixels);
             var frames = decoded.Frames?.Select((f, i) => (i == 0 ? bitmap : Upload(f.Pixels), f.Delay)).ToList();
-            // The CPU pixel array is dropped here: the GPU copy is the only one we keep (ADR 0002).
+            // The CPU pixel array is dropped here: the GPU copy is the only one we keep.
             return new LoadedImage(path, bitmap, decoded.OriginalWidth, decoded.OriginalHeight,
                 // A RAW preview is never "full": zooming past it must trigger the real demosaic.
                 full || (!ImageFormats.Raw.Contains(System.IO.Path.GetExtension(path))

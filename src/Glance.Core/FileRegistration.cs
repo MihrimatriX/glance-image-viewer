@@ -5,8 +5,8 @@ using Microsoft.Win32;
 namespace Glance.Core;
 
 /// <summary>
-/// Per-user (HKCU, no admin) registration for the unpackaged/installer build — what the MSIX manifest does for the
-/// packaged one: "Open with" entries, an entry in Settings › Default apps, and the Explorer thumbnail handler.
+/// Per-user (HKCU, no admin) registration: "Open with" entries, an entry in Settings › Default apps, and the
+/// Explorer thumbnail handler.
 /// Never takes over a default by itself (Windows forbids it) and never overrides a thumbnail handler that's already there.
 /// </summary>
 [SupportedOSPlatform("windows")]

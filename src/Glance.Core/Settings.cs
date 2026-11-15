@@ -6,8 +6,8 @@ namespace Glance.Core;
 /// <summary>All settings are optional; missing or corrupt files fall back to defaults.</summary>
 public sealed record Settings(bool FirstRunDone = false, string[]? RecentFiles = null)
 {
-    /// <summary>Folder for settings and logs: packaged → ApplicationData.LocalFolder (passed in), portable → %LOCALAPPDATA%\Glance.</summary>
-    public static string DataFolder { get; set; } =
+    /// <summary>Folder for settings and logs: %LOCALAPPDATA%\Glance.</summary>
+    public static string DataFolder { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Glance");
 
     private static string FilePath => Path.Combine(DataFolder, "settings.json");

@@ -5,7 +5,7 @@ using Windows.Storage.Streams;
 namespace Glance.Imaging;
 
 /// <summary>
-/// PDF, and Illustrator files saved PDF-compatible (the default since CS), through Windows' own PDF renderer (ADR 0009) —
+/// PDF, and Illustrator files saved PDF-compatible (the default since CS), through Windows' own PDF renderer —
 /// never Ghostscript, which Magick's policy keeps blocked. First page only, on white like paper. The page renders straight
 /// at the size asked for; <see cref="DecodedImage.OriginalWidth"/> reports it at 300 dpi, so zooming in re-renders it sharp.
 /// </summary>

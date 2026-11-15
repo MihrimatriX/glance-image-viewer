@@ -101,7 +101,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     // After the first pixel: if this folder has HEIC/WebP/…, load Magick now so the first one opens without the native-load stall.
-    // Folders without such files never pay its memory (ADR 0003).
+    // Folders without such files never pay its memory.
     private static Task WarmUpMagickIfNeededAsync(string path) => Task.Run(() =>
     {
         if (Path.GetDirectoryName(path) is { } dir && Directory.EnumerateFiles(dir).Any(ImageFormats.IsMagickRouted))

@@ -10,14 +10,14 @@ namespace Glance.App;
 
 public partial class App : Application
 {
-    // ponytail: plain DI container, no Generic Host — Host startup cost hurts the cold-start budget (ADR 0001).
+    // ponytail: plain DI container, no Generic Host — Host startup cost hurts the cold-start budget.
     public static IServiceProvider Services { get; } = new ServiceCollection()
         .AddSingleton<WicDecoder>()
         .AddSingleton<IImageDecoder>(s => s.GetRequiredService<WicDecoder>())
         .AddSingleton<IImageDecoder, PdfDecoder>()
         .AddSingleton<IImageDecoder, EpsPreviewDecoder>()
         .AddSingleton<IImageDecoder, RawPreviewDecoder>()
-        .AddSingleton<IImageDecoder, MagickDecoder>()   // registering doesn't load Magick (ADR 0003)
+        .AddSingleton<IImageDecoder, MagickDecoder>()   // registering doesn't load Magick
         .AddSingleton<DecoderRouter>()
         .AddSingleton<ImageLoader>()
         .AddSingleton<MainViewModel>()
@@ -31,8 +31,6 @@ public partial class App : Application
         _activation = activation;
         InitializeComponent();
 
-        if (IsPackaged)
-            Settings.DataFolder = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
         UnhandledException += (_, e) => Log.Error("Unhandled exception", e.Exception);
         TaskScheduler.UnobservedTaskException += (_, e) => Log.Error("Unobserved task exception", e.Exception);
 
@@ -83,19 +81,4 @@ public partial class App : Application
         : Regex.Matches(commandLine, "\"([^\"]*)\"|(\\S+)")
             .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
             .FirstOrDefault(t => !t.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && (File.Exists(t) || Directory.Exists(t)));
-
-    public static bool IsPackaged
-    {
-        get
-        {
-            try
-            {
-                return Windows.ApplicationModel.Package.Current is not null;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
-    }
 }

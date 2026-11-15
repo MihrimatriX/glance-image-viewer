@@ -15,7 +15,7 @@ public sealed record MagickLimits(ulong MaxSide, ulong ListLength, ulong? Memory
 }
 
 /// <summary>
-/// Security policy and resource limits for every Magick call (ADR 0007). ImageMagick reads its policy once, on first
+/// Security policy and resource limits for every Magick call. ImageMagick reads its policy once, on first
 /// use, and silently ignores a later <c>Initialize</c> — so every entry point into Magick calls
 /// <see cref="EnsureInitialized"/> before touching a Magick type.
 /// </summary>
@@ -23,7 +23,7 @@ public static class MagickSetup
 {
     // Ghostscript (PS/EPS/PDF/AI/XPS) runs as an external process if the user has it installed; MVG/MSVG/MSL/TEXT and the
     // URL coders can read local files or the network from inside an image. None of them is a format Glance opens through
-    // Magick: PDF/AI go to Windows' PDF renderer and EPS shows its embedded preview instead (ADR 0009).
+    // Magick: PDF/AI go to Windows' PDF renderer and EPS shows its embedded preview instead.
     // ImageMagick's own defaults (EPHEMERAL, MVG, MSL, @file and |pipe paths) are repeated here because this replaces them.
     private const string Policy = """
         <policymap>

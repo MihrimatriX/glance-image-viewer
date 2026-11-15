@@ -13,9 +13,9 @@
     <DefaultLanguage>en-US</DefaultLanguage>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
-    <!-- Default build is unpackaged (portable). Packaged: dotnet build -p:WindowsPackageType=MSIX (see README). -->
+    <!-- Unpackaged only; MSIX tooling stays on because it builds resources.pri from the .resw strings. -->
     <EnableMsixTooling>true</EnableMsixTooling>
-    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
+    <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!-- Ship the .NET runtime too: a clean Windows install has no .NET 10 (R2 spirit: nothing else to install). -->
     <SelfContained>true</SelfContained>
@@ -45,8 +45,8 @@
     <ProjectReference Include="..\Glance.Imaging\Glance.Imaging.csproj" />
   </ItemGroup>
 
-  <!-- Packaged builds and release publishes carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, next to Glance.exe. -->
-  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(WindowsPackageType)' == 'MSIX' or '$(_IsPublishing)' == 'true'">
+  <!-- Release publishes carry the Explorer thumbnail handler: a NativeAOT DLL for the same RID, next to Glance.exe. -->
+  <Target Name="IncludeThumbnailHandler" BeforeTargets="AssignTargetPaths" Condition="'$(_IsPublishing)' == 'true'">
     <PropertyGroup>
       <ThumbsDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)thumbs\</ThumbsDir>
     </PropertyGroup>

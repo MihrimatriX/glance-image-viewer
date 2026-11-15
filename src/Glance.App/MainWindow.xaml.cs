@@ -324,7 +324,6 @@ public sealed partial class MainWindow : Window
                 var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
                 DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
             }
-            StartupTrace.FirstImageDrawn();
             UpdateZoomText();
             DrawCropOverlay(ds);
             DrawLoupe(ds, sender, image);
@@ -1018,7 +1017,7 @@ public sealed partial class MainWindow : Window
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
-        Registration.Register();   // no-op when packaged; makes Glance appear in Default apps otherwise
+        Registration.Register();   // makes Glance appear in Default apps
         await Launcher.LaunchUriAsync(Registration.DefaultAppsUri());
     }
 }

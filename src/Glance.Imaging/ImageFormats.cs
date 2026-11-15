@@ -26,8 +26,8 @@ public static class ImageFormats
     };
 
     /// <summary>
-    /// PDF and PDF-compatible Illustrator through Windows' PDF renderer, EPS by its embedded preview (ADR 0009). Never
-    /// Magick-routed: its PDF/PS coders would need Ghostscript, which the policy blocks (ADR 0007). No Explorer thumbnails:
+    /// PDF and PDF-compatible Illustrator through Windows' PDF renderer, EPS by its embedded preview. Never
+    /// Magick-routed: its PDF/PS coders would need Ghostscript, which the policy blocks. No Explorer thumbnails:
     /// Windows and Adobe bring their own.
     /// </summary>
     public static readonly HashSet<string> Document = new(StringComparer.OrdinalIgnoreCase) { ".pdf", ".ai", ".eps" };

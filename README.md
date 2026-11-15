@@ -15,7 +15,7 @@
   <a href="README.tr.md">Türkçe</a>
 </p>
 
-![Glance showing a photo with ambient light and the filmstrip](docs/screenshots/main.jpg)
+![Glance showing a photo with ambient light and the filmstrip](site/screenshot.jpg)
 
 ## Why Glance?
 
@@ -106,10 +106,6 @@ Requirements: Windows, the [.NET 10 SDK](https://dotnet.microsoft.com/download),
 dotnet build src/Glance.App
 ```
 
-```bash
-dotnet test --solution Glance.slnx
-```
-
 Release build exactly as GitHub Actions does it (trimmed, self-contained, with the thumbnail handler):
 
 ```bash
@@ -126,9 +122,6 @@ Pushing a tag such as `v0.2.0` makes `.github/workflows/release.yml` build the x
 | `src/Glance.Core` | No UI: folder navigation and file watching, memory-bounded LRU cache, prefetch order, settings |
 | `src/Glance.Imaging` | Decoders: WIC (through generated COM), Magick.NET for everything else, RAW preview scanner, metadata, editing |
 | `src/Glance.Thumbnails` | Explorer thumbnail handler compiled with NativeAOT (no .NET runtime loaded into Explorer's host) |
-| `tests/` | xUnit v3: decoders, all 8 EXIF orientations, colour management, formats, editing, registration |
-| `benchmarks/` | BenchmarkDotNet decode and cold-start benchmarks, app start-up script ([details](benchmarks/README.md)) |
-| `docs/adr` | Architecture decision records — the "why" behind each choice |
 
 ## Contributing
 

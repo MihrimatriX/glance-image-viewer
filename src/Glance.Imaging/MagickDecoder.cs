@@ -14,7 +14,7 @@ public sealed class MagickDecoder : IImageDecoder
     public int Priority => 20;
 
     public bool CanDecode(string extension, ReadOnlySpan<byte> h) =>
-        HeifBrand.Detect(h)                                                 // HEIC/HEIF/AVIF: bundled libheif (ADR 0010)
+        HeifBrand.Detect(h)                                                 // HEIC/HEIF/AVIF: bundled libheif
         || (h.StartsWith("RIFF"u8) && h.Length >= 12 && h[8..12].SequenceEqual("WEBP"u8))
         || Has(h, 0xFF, 0x0A)                                               // JXL codestream
         || Has(h, 0x00, 0x00, 0x00, 0x0C, 0x4A, 0x58, 0x4C, 0x20, 0x0D, 0x0A, 0x87, 0x0A)   // JXL container
@@ -47,7 +47,7 @@ public sealed class MagickDecoder : IImageDecoder
         }
     }
 
-    /// <summary>Loads the native library ahead of the first Magick-routed file (ADR 0003). Safe to call repeatedly.</summary>
+    /// <summary>Loads the native library ahead of the first Magick-routed file. Safe to call repeatedly.</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void WarmUp()
     {

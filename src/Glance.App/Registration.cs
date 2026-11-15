@@ -4,13 +4,11 @@ using Microsoft.Win32;
 
 namespace Glance.App;
 
-/// <summary>HKCU registration for the installer/portable build; the MSIX manifest covers the packaged one.</summary>
+/// <summary>HKCU registration for the installer and portable builds.</summary>
 internal static class Registration
 {
     public static int Register()
     {
-        if (App.IsPackaged)
-            return 0;
         try
         {
             FileRegistration.Register(Registry.CurrentUser, Environment.ProcessPath!, ImageFormats.All,
@@ -27,8 +25,6 @@ internal static class Registration
 
     public static int Unregister()
     {
-        if (App.IsPackaged)
-            return 0;
         FileRegistration.Unregister(Registry.CurrentUser, ImageFormats.All);
         FileRegistration.NotifyShell();
         return 0;
@@ -39,8 +35,6 @@ internal static class Registration
     {
         if (Environment.OSVersion.Version.Build < 22000)
             return new Uri("ms-settings:defaultapps");
-        return App.IsPackaged
-            ? new Uri($"ms-settings:defaultapps?registeredAUMID={Uri.EscapeDataString(Windows.ApplicationModel.Package.Current.Id.FamilyName + "!App")}")
-            : new Uri($"ms-settings:defaultapps?registeredAppUser={FileRegistration.AppName}");
+        return new Uri($"ms-settings:defaultapps?registeredAppUser={FileRegistration.AppName}");
     }
 }

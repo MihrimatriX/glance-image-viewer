@@ -7,7 +7,7 @@ namespace Glance.Thumbnails;
 /// <summary>COM server entry points exported from the NativeAOT DLL.</summary>
 public static unsafe class Exports
 {
-    // Must match desktop2:ThumbnailHandler / com:Class in Package.appxmanifest.
+    // Must match FileRegistration.ThumbnailClsid.
     public static readonly Guid Clsid = new("fa45545e-4edc-4912-90ad-24efae6273d0");
 
     internal static readonly StrategyBasedComWrappers ComWrappers = new();

@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 namespace Glance.Imaging;
 
 /// <summary>
-/// EPS without Ghostscript (ADR 0009): the TIFF preview that DOS-format EPS files (Photoshop, Illustrator and most Windows
+/// EPS without Ghostscript: the TIFF preview that DOS-format EPS files (Photoshop, Illustrator and most Windows
 /// tools write them) carry next to their PostScript, decoded by WIC. Plain-text EPS has no such preview; no decoder claims it.
 /// </summary>
 public sealed class EpsPreviewDecoder(WicDecoder wic) : IImageDecoder
