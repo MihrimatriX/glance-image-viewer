@@ -6,7 +6,8 @@ using Windows.Graphics.DirectX;
 namespace Glance.App;
 
 /// <summary>A decoded image already on the GPU. Bitmap is at 96 DPI (1 DIP = 1 bitmap pixel).</summary>
-public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalWidth, int OriginalHeight, bool IsFull)
+public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalWidth, int OriginalHeight, bool IsFull,
+    int PageIndex = 0, int PageCount = 1)
 {
     private const int HistogramSide = 1024;
     private Task<(Histogram Histogram, uint[] Palette)>? _colors;
@@ -48,12 +49,12 @@ public sealed record LoadedImage(string Path, CanvasBitmap Bitmap, int OriginalW
 public sealed class ImageLoader
 {
     private readonly DecoderRouter _router;
-    private readonly LruCache<(string Path, bool Full), LoadedImage> _cache;
+    private readonly LruCache<(string Path, bool Full, int Page), LoadedImage> _cache;
 
     public ImageLoader(DecoderRouter router)
     {
         _router = router;
-        _cache = new(LruCache<(string, bool), LoadedImage>.DefaultBudget(),
+        _cache = new(LruCache<(string, bool, int), LoadedImage>.DefaultBudget(),
             i => i.SizeBytes,
             i =>
             {
@@ -68,8 +69,8 @@ public sealed class ImageLoader
 
     public long BudgetBytes => _cache.BudgetBytes;
 
-    /// <summary>Would open instantly (screen-sized or full decode is on the GPU already).</summary>
-    public bool IsCached(string path) => _cache.Contains((path, false)) || _cache.Contains((path, true));
+    /// <summary>Would open instantly (screen-sized or full decode of page 0 is on the GPU already).</summary>
+    public bool IsCached(string path) => _cache.Contains((path, false, 0)) || _cache.Contains((path, true, 0));
 
     /// <summary>The image on screen. Never disposed by eviction.</summary>
     public LoadedImage? Current { get; set; }
@@ -86,9 +87,9 @@ public sealed class ImageLoader
     public static CanvasDevice Device => CanvasDevice.GetSharedDevice();
 
     /// <summary>Must be awaited from the UI thread: cache insertion happens there, so eviction never races a Draw.</summary>
-    public async Task<LoadedImage> LoadAsync(string path, bool full, CancellationToken ct)
+    public async Task<LoadedImage> LoadAsync(string path, bool full, CancellationToken ct, int page = 0)
     {
-        if (_cache.TryGet((path, full), out var hit) || (!full && _cache.TryGet((path, true), out hit)))
+        if (_cache.TryGet((path, full, page), out var hit) || (!full && _cache.TryGet((path, true, page), out hit)))
             return hit;
 
         var (w, h) = ScreenSize;
@@ -97,7 +98,7 @@ public sealed class ImageLoader
             await using var file = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete, 1 << 16, FileOptions.Asynchronous);
             var decoded = await _router.DecodeAsync(file, System.IO.Path.GetExtension(path),
-                full ? new DecodeOptions() : new DecodeOptions(w, h, PreferEmbeddedPreview: true), ct).ConfigureAwait(false);
+                full ? new DecodeOptions(FrameIndex: page) : new DecodeOptions(w, h, PreferEmbeddedPreview: true, FrameIndex: page), ct).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             CanvasBitmap Upload(byte[] pixels) => CanvasBitmap.CreateFromBytes(Device, pixels, decoded.Width, decoded.Height,
                 DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
@@ -107,22 +108,20 @@ public sealed class ImageLoader
             return new LoadedImage(path, bitmap, decoded.OriginalWidth, decoded.OriginalHeight,
                 // A RAW preview is never "full": zooming past it must trigger the real demosaic.
                 full || (!ImageFormats.Raw.Contains(System.IO.Path.GetExtension(path))
-                         && decoded.Width == decoded.OriginalWidth && decoded.Height == decoded.OriginalHeight))
+                         && decoded.Width == decoded.OriginalWidth && decoded.Height == decoded.OriginalHeight),
+                Math.Clamp(page, 0, Math.Max(0, decoded.PageCount - 1)),
+                decoded.PageCount)
             { Frames = frames };
         }, ct);
 
-        _cache.Add((path, image.IsFull), image);
+        _cache.Add((path, image.IsFull, image.PageIndex), image);
         return image;
     }
 
     /// <summary>Largest side the GPU accepts for one bitmap; beyond it only screen-sized decode works until tiling (Phase 2).</summary>
     public static int MaxBitmapSize => Device.MaximumBitmapSizeInPixels;
 
-    public void Forget(string path)
-    {
-        _cache.Remove((path, false));
-        _cache.Remove((path, true));
-    }
+    public void Forget(string path) => _cache.RemoveWhere(k => string.Equals(k.Path, path, StringComparison.OrdinalIgnoreCase));
 
     public void Clear() => _cache.Clear();
 }

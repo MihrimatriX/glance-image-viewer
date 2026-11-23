@@ -5,6 +5,7 @@ using Glance.Core;
 using Glance.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Brushes;
 using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
@@ -19,6 +20,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.Windows.Storage.Pickers;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
+using Windows.Graphics;
 using Windows.Storage;
 using Windows.System;
 using Windows.UI.Core;
@@ -29,7 +31,6 @@ namespace Glance.App;
 public sealed partial class MainWindow : Window
 {
     private static readonly TimeSpan ChromeTimeout = TimeSpan.FromSeconds(1.5);
-    private static readonly TimeSpan SlideInterval = TimeSpan.FromSeconds(4);
     private const double FadeMs = 220, ZoomMs = 160, AmbientFadeMs = 450;
     private const double SlideFraction = 0.06;    // navigation slide distance, as a fraction of the view width
     private const double KenBurnsZoom = 0.06;     // slideshow drifts 6% closer over one slide
@@ -43,7 +44,15 @@ public sealed partial class MainWindow : Window
     private Viewport _view;
     private bool _fit = true;
     private int _rotation;            // quarter turns clockwise (view only, file untouched)
+    private bool _flipH, _flipV;      // horizontal / vertical mirror (view only until saved)
     private bool _pointerOverChrome, _cursorHidden;
+
+    // Preferences (loaded from Settings and updated live from the Settings dialog).
+    private bool _ambientOn = true;
+    private bool _checkerboard;
+    private bool _kenBurns = true;
+    private WheelAction _wheelAction = WheelAction.Zoom;
+    private TimeSpan _slideInterval = TimeSpan.FromSeconds(4);
 
     // Zoom animation: from -> to over ZoomMs, started at _animStart (ms on _clock; < 0 = idle).
     private Viewport _animFrom, _animTo;
@@ -51,14 +60,18 @@ public sealed partial class MainWindow : Window
     private bool _fitAfterAnim;
 
     // Navigation transition: the outgoing image slides/fades out with its own viewport.
-    private (LoadedImage Image, Viewport View, int Rotation)? _outgoing;
+    private (LoadedImage Image, Viewport View, int Rotation, bool FlipH, bool FlipV)? _outgoing;
     private double _fadeStart;
     private int _slideDirection;
 
-    // Ambient light: tiny blurred copies of the current (and previous) image, stretched behind everything.
-    private bool _ambientOn = true;
-    private CanvasRenderTarget? _ambient, _ambientOut;
+    // Ambient light & transparency checkerboard GPU resources.
+    private CanvasRenderTarget? _ambient, _ambientOut, _checkerTile;
+    private CanvasImageBrush? _checkerBrush;
+    private ElementTheme _checkerTheme;
     private double _ambientStart;
+
+    // Last non-maximized window rect, saved to Settings on close.
+    private RectInt32 _restoredBounds;
 
     // Mouse drag + momentum (physical px per ms).
     private Point? _dragFrom;
@@ -94,15 +107,10 @@ public sealed partial class MainWindow : Window
         if (SystemBackdrop is null)
             Root.Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
 
-        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
-        var display = area.OuterBounds;
-        _loader.ScreenSize = (display.Width, display.Height);
-
-        // The OS default size nearly fills large monitors; open at 70% of the work area, centered.
-        var work = area.WorkArea;
-        int w = work.Width * 7 / 10, h = work.Height * 7 / 10;
-        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(
-            work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h));
+        var settings = Settings.Load();
+        ApplySettings(settings);
+        RestoreWindowBounds(settings.Window);
+        UpdateDisplaySize();
 
         ViewModel.PropertyChanged += (_, e) =>
         {
@@ -122,14 +130,24 @@ public sealed partial class MainWindow : Window
         _frameTimer = DispatcherQueue.CreateTimer();
         _frameTimer.Tick += (_, _) => NextFrame();
         _slideTimer = DispatcherQueue.CreateTimer();
-        _slideTimer.Interval = SlideInterval;
+        _slideTimer.Interval = _slideInterval;
         _slideTimer.Tick += async (_, _) => await NextSlideAsync();
         Root.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, _) => ShowChrome()), handledEventsToo: true);
-        Root.ActualThemeChanged += (_, _) => Canvas.Invalidate();
+        Root.ActualThemeChanged += (_, _) =>
+        {
+            DisposeCheckerboard();
+            UpdateTitleBarColors();
+            Canvas.Invalidate();
+        };
         AppWindow.Changed += (_, e) =>
         {
             if (e.DidPresenterChange)   // in and out of full screen, by key or slideshow
                 UpdateTitleBarColors();
+            if (e.DidPositionChange || e.DidSizeChange)
+            {
+                UpdateDisplaySize();
+                TrackRestoredBounds();
+            }
         };
 
         // Floating panels glide in from where they sit instead of popping.
@@ -141,18 +159,103 @@ public sealed partial class MainWindow : Window
 
         Closed += async (_, _) =>
         {
+            SaveWindowBounds();
             await ViewModel.CommitPendingDeleteAsync();
+            DisposeCheckerboard();
             Canvas.RemoveFromVisualTree();   // Win2D: break the control <-> device cycle
             HistogramCanvas.RemoveFromVisualTree();
             WheelCanvas.RemoveFromVisualTree();
         };
     }
 
+    /// <summary>Restores the window if minimized and brings it to the foreground (single-instance activation).</summary>
+    public void BringToFront()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter)
+            presenter.Restore();
+        Activate();
+    }
+
+    private void ApplySettings(Settings settings)
+    {
+        _ambientOn = settings.AmbientLight;
+        _checkerboard = settings.Checkerboard;
+        _kenBurns = settings.KenBurns;
+        _wheelAction = settings.WheelAction;
+        _slideInterval = TimeSpan.FromSeconds(settings.ClampedSlideSeconds);
+        if (_slideTimer is not null)
+            _slideTimer.Interval = _slideInterval;
+        ViewModel.ShowFilmStrip = settings.ShowFilmStrip;
+        Root.RequestedTheme = settings.Theme switch
+        {
+            AppTheme.Light => ElementTheme.Light,
+            AppTheme.Dark => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+        UpdateTitleBarColors();
+    }
+
+    private void RestoreWindowBounds(WindowBounds? saved)
+    {
+        if (saved is { Width: >= 400, Height: >= 300 } && IntersectsAnyDisplay(saved))
+        {
+            _restoredBounds = new RectInt32(saved.X, saved.Y, saved.Width, saved.Height);
+            AppWindow.MoveAndResize(_restoredBounds);
+            if (saved.Maximized && AppWindow.Presenter is OverlappedPresenter presenter)
+                presenter.Maximize();
+            return;
+        }
+        // The OS default size nearly fills large monitors; open at 70% of the work area, centered.
+        var work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+        int w = work.Width * 7 / 10, h = work.Height * 7 / 10;
+        _restoredBounds = new RectInt32(work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h);
+        AppWindow.MoveAndResize(_restoredBounds);
+    }
+
+    private static bool IntersectsAnyDisplay(WindowBounds b)
+    {
+        foreach (var area in DisplayArea.FindAll())
+        {
+            var w = area.WorkArea;
+            var overlapX = Math.Min(b.X + b.Width, w.X + w.Width) - Math.Max(b.X, w.X);
+            var overlapY = Math.Min(b.Y + b.Height, w.Y + w.Height) - Math.Max(b.Y, w.Y);
+            if (overlapX >= 100 && overlapY >= 60)
+                return true;
+        }
+        return false;
+    }
+
+    private void UpdateDisplaySize()
+    {
+        var display = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).OuterBounds;
+        if (display.Width > 0 && display.Height > 0)
+            _loader.ScreenSize = (display.Width, display.Height);
+    }
+
+    private void TrackRestoredBounds()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Restored })
+            _restoredBounds = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+    }
+
+    private void SaveWindowBounds()
+    {
+        var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        if (!maximized)
+            TrackRestoredBounds();
+        if (_restoredBounds.Width < 400 || _restoredBounds.Height < 300)
+            return;
+        var bounds = new WindowBounds(_restoredBounds.X, _restoredBounds.Y, _restoredBounds.Width, _restoredBounds.Height, maximized);
+        (Settings.Load() with { Window = bounds }).Save();
+    }
+
     public string TitleText(string? fileName) => fileName is null ? "Glance" : $"{fileName} — Glance";
 
     public Visibility HasText(string? text) => string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
 
-    public Visibility HasItems(int count) => count > 1 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility BoolVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility FilmVisibility(int count, bool show) => show && count > 1 ? Visibility.Visible : Visibility.Collapsed;
 
     public string? TakenText(PhotoMetadata? photo) =>
         photo?.Taken?.ToString("f", System.Globalization.CultureInfo.CurrentCulture);
@@ -229,17 +332,20 @@ public sealed partial class MainWindow : Window
 
     private void ShowImage(LoadedImage? image)
     {
-        if (image?.Path != _image?.Path)
+        var sameDoc = image?.Path == _image?.Path && image?.PageIndex == _image?.PageIndex;
+        if (!sameDoc)
         {
             if (_image is not null && image is not null && !Comparing)
             {
-                _outgoing = (_image, _view, _rotation);
+                _outgoing = (_image, _view, _rotation, _flipH, _flipV);
                 _loader.Previous = _image;   // keep it alive while it slides out
                 _fadeStart = Now;
                 _slideDirection = ViewModel.LastDirection;
             }
             _fit = true;
             _rotation = 0;
+            _flipH = false;
+            _flipV = false;
             _animStart = -1;
             _inertiaLast = -1;
             _frame = 0;
@@ -282,6 +388,7 @@ public sealed partial class MainWindow : Window
         if (args.Reason != CanvasCreateResourcesReason.NewDevice)
             return;
         _ambient = _ambientOut = null;   // device lost: every GPU resource went with it
+        DisposeCheckerboard();
         UpdateTitleBarColors();
         if (_image is not null)
             ViewModel.Reload();
@@ -309,7 +416,7 @@ public sealed partial class MainWindow : Window
             else
             {
                 var away = outgoing.View.Pan(-slide * EaseOut(t), 0);
-                DrawImage(ds, outgoing.Image, outgoing.Image.Bitmap, away, outgoing.Rotation, (float)(1 - EaseOut(t)));
+                DrawImage(ds, outgoing.Image, outgoing.Image.Bitmap, away, outgoing.Rotation, outgoing.FlipH, outgoing.FlipV, (float)(1 - EaseOut(t)));
                 again = true;
             }
         }
@@ -322,7 +429,7 @@ public sealed partial class MainWindow : Window
             if (!DrawCompare(ds, image))
             {
                 var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
-                DrawImage(ds, image, CurrentBitmap(image), view, _rotation, (float)EaseOut(t));
+                DrawImage(ds, image, CurrentBitmap(image), view, _rotation, _flipH, _flipV, (float)EaseOut(t));
             }
             UpdateZoomText();
             DrawCropOverlay(ds);
@@ -365,40 +472,92 @@ public sealed partial class MainWindow : Window
             return false;
 
         _view = Viewport.Fit(rw, rh, vw, vh);
-        if (!_slideshow)
+        if (!_slideshow || !_kenBurns)
             return false;
         // Ken Burns: a slow, steady push-in around the centre for the length of the slide.
-        var drift = 1 + KenBurnsZoom * Math.Clamp((now - _kenBurnsStart) / SlideInterval.TotalMilliseconds, 0, 1);
+        var drift = 1 + KenBurnsZoom * Math.Clamp((now - _kenBurnsStart) / _slideInterval.TotalMilliseconds, 0, 1);
         _view = _view.ZoomAt(drift, vw / 2, vh / 2);
         return true;
     }
 
-    private Matrix3x2 ImageTransform(LoadedImage image, Viewport view, int rotation)
+    private Matrix3x2 ImageTransform(LoadedImage image, Viewport view, int rotation, bool flipH, bool flipV)
     {
         float ow = image.OriginalWidth, oh = image.OriginalHeight;
-        var rotate = Matrix3x2.CreateRotation(rotation * MathF.PI / 2) * Matrix3x2.CreateTranslation(rotation switch
+        float rw = rotation % 2 == 0 ? ow : oh, rh = rotation % 2 == 0 ? oh : ow;
+        var transform = Matrix3x2.CreateRotation(rotation * MathF.PI / 2) * Matrix3x2.CreateTranslation(rotation switch
         {
             1 => new Vector2(oh, 0),
             2 => new Vector2(ow, oh),
             3 => new Vector2(0, ow),
             _ => Vector2.Zero,
         });
-        // image px -> rotated image px -> view (physical px) -> DIPs
-        return rotate
+        if (flipH)
+            transform *= Matrix3x2.CreateScale(-1, 1) * Matrix3x2.CreateTranslation(rw, 0);
+        if (flipV)
+            transform *= Matrix3x2.CreateScale(1, -1) * Matrix3x2.CreateTranslation(0, rh);
+        // image px -> rotated/flipped image px -> view (physical px) -> DIPs
+        return transform
             * Matrix3x2.CreateScale((float)view.Scale)
             * Matrix3x2.CreateTranslation((float)view.OffsetX, (float)view.OffsetY)
             * Matrix3x2.CreateScale((float)(1 / DpiScale));
     }
 
-    private void DrawImage(CanvasDrawingSession ds, LoadedImage image, CanvasBitmap bitmap, Viewport view, int rotation, float opacity)
+    private void DrawImage(CanvasDrawingSession ds, LoadedImage image, CanvasBitmap bitmap, Viewport view, int rotation, bool flipH, bool flipV, float opacity)
     {
-        ds.Transform = ImageTransform(image, view, rotation);
+        var transform = ImageTransform(image, view, rotation, flipH, flipV);
+        if (_checkerboard && opacity > 0.01f)
+        {
+            var p0 = Vector2.Transform(Vector2.Zero, transform);
+            var p1 = Vector2.Transform(new Vector2(image.OriginalWidth, image.OriginalHeight), transform);
+            var minX = MathF.Min(p0.X, p1.X);
+            var minY = MathF.Min(p0.Y, p1.Y);
+            var rect = new Rect(minX, minY, MathF.Abs(p1.X - p0.X), MathF.Abs(p1.Y - p0.Y));
+            var brush = EnsureCheckerBrush();
+            brush.Opacity = opacity;
+            ds.FillRectangle(rect, brush);
+        }
+        ds.Transform = transform;
         var bitmapScale = view.Scale * image.OriginalWidth / bitmap.SizeInPixels.Width;
         var interpolation = bitmapScale < 1 ? CanvasImageInterpolation.HighQualityCubic
                           : bitmapScale >= 3 ? CanvasImageInterpolation.NearestNeighbor
                           : CanvasImageInterpolation.Linear;
         ds.DrawImage(bitmap, new Rect(0, 0, image.OriginalWidth, image.OriginalHeight), bitmap.Bounds, opacity, interpolation);
         ds.Transform = Matrix3x2.Identity;
+    }
+
+    private CanvasImageBrush EnsureCheckerBrush()
+    {
+        var theme = Root.ActualTheme;
+        if (_checkerBrush is not null && _checkerTheme == theme)
+            return _checkerBrush;
+        DisposeCheckerboard();
+        const int cell = 12;
+        var device = ImageLoader.Device;
+        _checkerTile = new CanvasRenderTarget(device, cell * 2, cell * 2, 96);
+        var dark = theme == ElementTheme.Dark;
+        var a = dark ? Windows.UI.Color.FromArgb(255, 58, 58, 62) : Windows.UI.Color.FromArgb(255, 232, 232, 236);
+        var b = dark ? Windows.UI.Color.FromArgb(255, 42, 42, 46) : Windows.UI.Color.FromArgb(255, 204, 204, 210);
+        using (var s = _checkerTile.CreateDrawingSession())
+        {
+            s.Clear(a);
+            s.FillRectangle(cell, 0, cell, cell, b);
+            s.FillRectangle(0, cell, cell, cell, b);
+        }
+        _checkerBrush = new CanvasImageBrush(device, _checkerTile)
+        {
+            ExtendX = CanvasEdgeBehavior.Wrap,
+            ExtendY = CanvasEdgeBehavior.Wrap,
+        };
+        _checkerTheme = theme;
+        return _checkerBrush;
+    }
+
+    private void DisposeCheckerboard()
+    {
+        _checkerBrush?.Dispose();
+        _checkerBrush = null;
+        _checkerTile?.Dispose();
+        _checkerTile = null;
     }
 
     // ---------- Ambient light ----------
@@ -459,6 +618,7 @@ public sealed partial class MainWindow : Window
     private void ToggleAmbient()
     {
         _ambientOn = !_ambientOn;
+        (Settings.Load() with { AmbientLight = _ambientOn }).Save();
         UpdateTitleBarColors();
         Canvas.Invalidate();
     }
@@ -571,6 +731,24 @@ public sealed partial class MainWindow : Window
         Canvas.Invalidate();
     }
 
+    private void FlipHorizontal()
+    {
+        if (_image is null)
+            return;
+        _flipH = !_flipH;
+        UpdateSaveRotationButton();
+        Canvas.Invalidate();
+    }
+
+    private void FlipVertical()
+    {
+        if (_image is null)
+            return;
+        _flipV = !_flipV;
+        UpdateSaveRotationButton();
+        Canvas.Invalidate();
+    }
+
     private void Pan(double dxPhysical, double dyPhysical)
     {
         if (_image is null)
@@ -600,6 +778,7 @@ public sealed partial class MainWindow : Window
         StopMotion();
         _fit = true;
         _kenBurnsStart = Now;
+        _slideTimer.Interval = _slideInterval;
         _slideTimer.Start();
         HideChrome();
         Canvas.Invalidate();
@@ -630,7 +809,7 @@ public sealed partial class MainWindow : Window
         _frameTimer.Stop();
         var animated = _image?.Frames is { Count: > 1 };
         PlayButton.Visibility = animated ? Visibility.Visible : Visibility.Collapsed;
-        PlayIcon.Glyph = _playing ? "" : "";   // pause : play
+        PlayIcon.Glyph = _playing ? "\uE769" : "\uE768";   // pause : play
         if (animated && _playing)
         {
             _frameTimer.Interval = _image!.Frames![_frame % _image.Frames.Count].Delay;
@@ -660,7 +839,17 @@ public sealed partial class MainWindow : Window
         var point = e.GetCurrentPoint(Canvas);
         var delta = point.Properties.MouseWheelDelta;
         var ctrl = e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control);
-        // ponytail: wheel steps that aren't multiples of 120 are treated as a precision touchpad two-finger pan;
+
+        // User-selected wheel mode: mouse wheel notches browse previous/next image; Ctrl+wheel still zooms.
+        if (_wheelAction == WheelAction.Navigate && !ctrl && !point.Properties.IsHorizontalMouseWheel && delta % 120 == 0)
+        {
+            StopSlideshow();
+            _ = delta < 0 ? ViewModel.NextAsync() : ViewModel.PreviousAsync();
+            e.Handled = true;
+            return;
+        }
+
+        // Wheel steps that aren't multiples of 120 are treated as a precision touchpad two-finger pan;
         // touchpad pinch arrives as Ctrl+wheel and zooms.
         if (!ctrl && (point.Properties.IsHorizontalMouseWheel || delta % 120 != 0))
         {
@@ -769,11 +958,31 @@ public sealed partial class MainWindow : Window
 
     // ---------- Keyboard ----------
 
+    /// <summary>Don't hijack keys when a dialog/flyout is open, an input/dropdown is focused, or the user is copying selected info text.</summary>
+    private bool ShouldIgnoreShortcut(bool isCtrl)
+    {
+        if (Root.XamlRoot is not { } xamlRoot)
+            return false;
+        if (VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot).Count > 0)
+            return true;
+        return FocusManager.GetFocusedElement(xamlRoot) switch
+        {
+            TextBox or PasswordBox or NumberBox or RichEditBox or ComboBox or ComboBoxItem or Slider => true,
+            TextBlock { SelectedText.Length: > 0 } when isCtrl => true,
+            _ => false,
+        };
+    }
+
     private async void Root_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
         var ctrl = IsDown(VirtualKey.Control);
         var shift = IsDown(VirtualKey.Shift);
-        if (Shortcuts.Visibility == Visibility.Visible && e.Key is not (VirtualKey.F1 or (VirtualKey)191))
+        var alt = IsDown(VirtualKey.Menu);
+
+        if (ShouldIgnoreShortcut(ctrl))
+            return;
+
+        if (Shortcuts.Visibility == Visibility.Visible && e.Key != VirtualKey.F1)
         {
             Shortcuts.Visibility = Visibility.Collapsed;   // any key closes the cheat sheet
             e.Handled = true;
@@ -782,6 +991,8 @@ public sealed partial class MainWindow : Window
         e.Handled = true;
         switch (e.Key)
         {
+            case VirtualKey.Left when alt: await ViewModel.PreviousPageAsync(); break;
+            case VirtualKey.Right when alt: await ViewModel.NextPageAsync(); break;
             case VirtualKey.Left or VirtualKey.PageUp: StopSlideshow(); await ViewModel.PreviousAsync(); break;
             case VirtualKey.Right or VirtualKey.PageDown: await ViewModel.NextAsync(); break;
             case VirtualKey.Home: await ViewModel.FirstAsync(); break;
@@ -791,11 +1002,15 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Enter when _cropMode: await ShowSaveAsAsync(); break;
             case VirtualKey.Escape when _slideshow: StopSlideshow(); break;
             case VirtualKey.Escape when AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen: ToggleFullscreen(); break;
-            case VirtualKey.Number0 or VirtualKey.NumberPad0: Fit(); break;
-            case VirtualKey.Number1 or VirtualKey.NumberPad1: ActualSize(Center); break;
-            case VirtualKey.Add or (VirtualKey)187: ZoomAt(1.25, Center); break;        // numpad +, OEM '+'
-            case VirtualKey.Subtract or (VirtualKey)189: ZoomAt(0.8, Center); break;    // numpad −, OEM '-'
+            case VirtualKey.Number0 or VirtualKey.NumberPad0 when !ctrl: Fit(); break;
+            case VirtualKey.Number1 or VirtualKey.NumberPad1 when !ctrl: ActualSize(Center); break;
+            case VirtualKey.Add: ZoomAt(1.25, Center); break;
+            case VirtualKey.Subtract: ZoomAt(0.8, Center); break;
             case VirtualKey.R when !ctrl: Rotate(shift ? -1 : 1); break;
+            case VirtualKey.H when !ctrl: FlipHorizontal(); break;
+            case VirtualKey.V when !ctrl: FlipVertical(); break;
+            case VirtualKey.V when ctrl: await ViewModel.PasteFromClipboardAsync(); break;
+            case VirtualKey.F2 when !ctrl: await ShowRenameAsync(); break;
             case VirtualKey.I when !ctrl: ToggleInfo(); break;
             case VirtualKey.S when ctrl: await ShowSaveAsAsync(); break;
             case VirtualKey.S: ToggleSlideshow(); break;
@@ -803,7 +1018,7 @@ public sealed partial class MainWindow : Window
             case VirtualKey.K when !ctrl: ToggleCompare(); break;
             case VirtualKey.L when !ctrl: ToggleLoupe(); break;
             case VirtualKey.B when !ctrl: ToggleAmbient(); break;
-            case VirtualKey.F1 or (VirtualKey)191: ToggleShortcuts(); break;   // F1, '?' / '/'
+            case VirtualKey.F1: ToggleShortcuts(); break;
             case VirtualKey.Delete: await ViewModel.DeleteAsync(); break;
             case VirtualKey.Z when ctrl: await ViewModel.UndoDeleteAsync(); break;
             case VirtualKey.C when ctrl && shift: ViewModel.CopyPath(); break;
@@ -811,10 +1026,26 @@ public sealed partial class MainWindow : Window
             case VirtualKey.O when ctrl: await PickAndOpenAsync(); break;
             case VirtualKey.E when ctrl: ViewModel.ShowInExplorer(); break;
             case VirtualKey.P when ctrl: await ViewModel.PrintAsync(); break;
+            case (VirtualKey)188 when ctrl: await ShowSettingsAsync(); break;   // Ctrl+,
             case VirtualKey.Space: TogglePlay(); break;
-            case (VirtualKey)188 when !_playing: NextFrame(-1); break;   // ','  previous frame
-            case (VirtualKey)190 when !_playing: NextFrame(+1); break;   // '.'  next frame
             default: e.Handled = false; break;
+        }
+    }
+
+    /// <summary>Layout-independent character shortcuts so ?, +, −, ,, ., [, ] work on Turkish Q and every other keyboard layout.</summary>
+    private async void Root_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs args)
+    {
+        if (IsDown(VirtualKey.Control) || IsDown(VirtualKey.Menu) || ShouldIgnoreShortcut(false))
+            return;
+        switch (args.Character)
+        {
+            case '?': ToggleShortcuts(); args.Handled = true; break;
+            case '+' or '=': ZoomAt(1.25, Center); args.Handled = true; break;
+            case '-': ZoomAt(0.8, Center); args.Handled = true; break;
+            case ',' when !_playing: NextFrame(-1); args.Handled = true; break;
+            case '.' when !_playing: NextFrame(+1); args.Handled = true; break;
+            case '[': await ViewModel.PreviousPageAsync(); args.Handled = true; break;
+            case ']': await ViewModel.NextPageAsync(); args.Handled = true; break;
         }
     }
 
@@ -846,11 +1077,13 @@ public sealed partial class MainWindow : Window
 
     private static readonly (string Keys, string Resource)[] ShortcutList =
     [
-        ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"),
-        ("R  ⇧R", "Sc_Rotate"), ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
-("C", "Sc_Crop"), ("K", "Sc_Compare"), ("L", "Sc_Loupe"), ("Ctrl+S", "Sc_SaveAs"),
-        ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"), ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"),
-        ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"), ("Ctrl+P", "Sc_Print"), ("Ctrl+drag", "Sc_DragOut"), ("?  F1", "Sc_Help"),
+        ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("[  ]  Alt+←/→", "Sc_Pages"),
+        ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"), ("R  ⇧R", "Sc_Rotate"), ("H  V", "Sc_Flip"),
+        ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
+        ("C", "Sc_Crop"), ("F2", "Sc_Rename"), ("K", "Sc_Compare"), ("L", "Sc_Loupe"), ("Ctrl+S", "Sc_SaveAs"),
+        ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"),
+        ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"), ("Ctrl+V", "Sc_Paste"), ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"),
+        ("Ctrl+P", "Sc_Print"), ("Ctrl+,", "Sc_Settings"), ("Ctrl+drag", "Sc_DragOut"), ("?  F1", "Sc_Help"),
     ];
 
     private void ToggleShortcuts()
@@ -893,17 +1126,22 @@ public sealed partial class MainWindow : Window
     private async void Open_Click(object sender, RoutedEventArgs e) => await PickAndOpenAsync();
     private async void Prev_Click(object sender, RoutedEventArgs e) => await ViewModel.PreviousAsync();
     private async void Next_Click(object sender, RoutedEventArgs e) => await ViewModel.NextAsync();
+    private async void PrevPage_Click(object sender, RoutedEventArgs e) => await ViewModel.PreviousPageAsync();
+    private async void NextPage_Click(object sender, RoutedEventArgs e) => await ViewModel.NextPageAsync();
     private void ZoomIn_Click(object sender, RoutedEventArgs e) => ZoomAt(1.25, Center);
     private void ZoomOut_Click(object sender, RoutedEventArgs e) => ZoomAt(0.8, Center);
     private void ZoomText_Click(object sender, RoutedEventArgs e) => ToggleFitActual(Center);
     private void Fit_Click(object sender, RoutedEventArgs e) => Fit();
     private void Rotate_Click(object sender, RoutedEventArgs e) => Rotate(1);
+    private void FlipH_Click(object sender, RoutedEventArgs e) => FlipHorizontal();
+    private void FlipV_Click(object sender, RoutedEventArgs e) => FlipVertical();
     private void Play_Click(object sender, RoutedEventArgs e) => TogglePlay();
     private void Slideshow_Click(object sender, RoutedEventArgs e) => ToggleSlideshow();
     private async void Delete_Click(object sender, RoutedEventArgs e) => await ViewModel.DeleteAsync();
     private async void Undo_Click(object sender, RoutedEventArgs e) => await ViewModel.UndoDeleteAsync();
     private void Info_Click(object sender, RoutedEventArgs e) => ToggleInfo();
     private void Fullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
+    private async void Settings_Click(object sender, RoutedEventArgs e) => await ShowSettingsAsync();
     private void Shortcuts_Tapped(object sender, TappedRoutedEventArgs e) => Shortcuts.Visibility = Visibility.Collapsed;
     private async void Recent_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.OpenAsync(((RecentItem)e.ClickedItem).Path);
     private async void Film_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.GoToAsync((FilmItem)e.ClickedItem);

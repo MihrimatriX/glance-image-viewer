@@ -33,4 +33,7 @@ public sealed record AnimationFrame(byte[] Pixels, TimeSpan Delay);
 public sealed record DecodedImage(byte[] Pixels, int Width, int Height, int OriginalWidth, int OriginalHeight)
 {
     public IReadOnlyList<AnimationFrame>? Frames { get; init; }
+
+    /// <summary>Total pages in a multi-page document or TIFF (1 for single-page images).</summary>
+    public int PageCount { get; init; } = 1;
 }

@@ -6,7 +6,8 @@
     xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     xmlns:local="using:Glance.App">
 
-    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop" PreviewKeyDown="Root_PreviewKeyDown">
+    <Grid x:Name="Root" AllowDrop="True" DragOver="Root_DragOver" DragLeave="Root_DragLeave" Drop="Root_Drop"
+          PreviewKeyDown="Root_PreviewKeyDown" CharacterReceived="Root_CharacterReceived">
         <Grid.Resources>
             <!-- A section of the info card, like a Settings card: lifts its group off the acrylic. -->
             <Style x:Key="InfoCardStyle" TargetType="Border">
@@ -52,12 +53,20 @@
                     <MenuFlyoutItem x:Uid="MenuCopyPath" KeyboardAcceleratorTextOverride="Ctrl+Shift+C" Click="MenuCopyPath_Click">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuPaste" Tag="AlwaysEnabled" KeyboardAcceleratorTextOverride="Ctrl+V" Click="MenuPaste_Click" Icon="Paste" />
                     <MenuFlyoutItem x:Uid="MenuReveal" KeyboardAcceleratorTextOverride="Ctrl+E" Click="MenuReveal_Click">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEC50;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem x:Uid="MenuRotate" KeyboardAcceleratorTextOverride="R" Click="Rotate_Click" Icon="Rotate" />
+                    <MenuFlyoutItem x:Uid="MenuFlipH" KeyboardAcceleratorTextOverride="H" Click="FlipH_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AB;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuFlipV" KeyboardAcceleratorTextOverride="V" Click="FlipV_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8CB;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
                     <MenuFlyoutItem x:Uid="MenuCrop" KeyboardAcceleratorTextOverride="C" Click="Crop_Click" Icon="Crop" />
+                    <MenuFlyoutItem x:Uid="MenuRename" KeyboardAcceleratorTextOverride="F2" Click="Rename_Click" Icon="Rename" />
                     <MenuFlyoutItem x:Uid="MenuSaveAs" KeyboardAcceleratorTextOverride="Ctrl+S" Click="SaveAs_Click" Icon="SaveLocal" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem x:Uid="MenuWallpaper" Click="MenuWallpaper_Click">
@@ -71,6 +80,7 @@
                     <MenuFlyoutItem x:Uid="MenuInfo" KeyboardAcceleratorTextOverride="I" Click="Info_Click">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE946;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuSettings" Tag="AlwaysEnabled" KeyboardAcceleratorTextOverride="Ctrl+," Click="Settings_Click" Icon="Setting" />
                     <MenuFlyoutItem x:Uid="MenuDelete" KeyboardAcceleratorTextOverride="Del" Click="Delete_Click" Icon="Delete" />
                 </MenuFlyout>
             </canvas:CanvasControl.ContextFlyout>
@@ -130,7 +140,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Bottom chrome: filmstrip + toolbar. -->
+        <!-- Bottom chrome: filmstrip + responsive toolbar. -->
         <StackPanel x:Name="BottomChrome" VerticalAlignment="Bottom" Spacing="8" Padding="16,0,16,16"
                     PointerEntered="Chrome_PointerEntered" PointerExited="Chrome_PointerExited">
             <StackPanel.OpacityTransition>
@@ -144,7 +154,7 @@
                       ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                       ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                       CornerRadius="8" Padding="4" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
-                      Visibility="{x:Bind HasItems(ViewModel.Film.Count), Mode=OneWay}">
+                      Visibility="{x:Bind FilmVisibility(ViewModel.Film.Count, ViewModel.ShowFilmStrip), Mode=OneWay}">
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
                         <ItemsStackPanel Orientation="Horizontal" />
@@ -174,48 +184,88 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4" CornerRadius="8"
+            <!-- Multi-page document/TIFF navigation pill, shown only when PageCount > 1. -->
+            <Border HorizontalAlignment="Center" Padding="4,2" CornerRadius="8"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{x:Bind BoolVisibility(ViewModel.HasMultiplePages), Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button x:Uid="PrevPageButton" Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0" Click="PrevPage_Click">
+                        <FontIcon Glyph="&#xE76B;" FontSize="12" />
+                    </Button>
+                    <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                               Text="{x:Bind ViewModel.PagePosition, Mode=OneWay}" />
+                    <Button x:Uid="NextPageButton" Width="32" Height="32" Padding="0" Background="Transparent" BorderThickness="0" Click="NextPage_Click">
+                        <FontIcon Glyph="&#xE76C;" FontSize="12" />
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Responsive toolbar: fixed navigation + zoom readout on the left, dynamically overflowing CommandBar on the right. -->
+            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4,2" CornerRadius="8"
                     Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
-                <StackPanel Orientation="Horizontal" Spacing="2">
-                    <AppBarButton x:Uid="OpenToolbarButton" Width="44" LabelPosition="Collapsed" Icon="OpenFile" Click="Open_Click" />
-                    <AppBarSeparator />
-                    <AppBarButton x:Uid="PrevButton" Width="44" LabelPosition="Collapsed" Icon="Back" Click="Prev_Click" />
-                    <TextBlock MinWidth="56" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
-                               Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
-                    <AppBarButton x:Uid="NextButton" Width="44" LabelPosition="Collapsed" Icon="Forward" Click="Next_Click" />
-                    <AppBarSeparator />
-                    <AppBarButton x:Uid="ZoomOutButton" Width="44" LabelPosition="Collapsed" Icon="ZoomOut" Click="ZoomOut_Click" />
-                    <Button x:Name="ZoomText" x:Uid="ZoomPercentButton" MinWidth="64" Padding="6,4" Background="Transparent" BorderThickness="0"
-                            FontSize="12" Click="ZoomText_Click" Content="100%" />
-                    <AppBarButton x:Uid="ZoomInButton" Width="44" LabelPosition="Collapsed" Icon="ZoomIn" Click="ZoomIn_Click" />
-                    <AppBarButton x:Uid="FitButton" Width="44" LabelPosition="Collapsed" Click="Fit_Click">
-                        <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
-                    </AppBarButton>
-                    <AppBarButton x:Uid="RotateButton" Width="44" LabelPosition="Collapsed" Icon="Rotate" Click="Rotate_Click" />
-                    <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" Width="44" LabelPosition="Collapsed" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
-                    <!-- Modes are toggles: the toolbar shows which one is on, however it was switched. -->
-                    <AppBarToggleButton x:Name="CropButton" x:Uid="CropButton" Width="44" LabelPosition="Collapsed" Icon="Crop" Click="Crop_Click" />
-                    <AppBarToggleButton x:Name="CompareButton" x:Uid="CompareButton" Width="44" LabelPosition="Collapsed" Click="Compare_Click">
-                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarToggleButton.Icon>
-                    </AppBarToggleButton>
-                    <AppBarToggleButton x:Name="LoupeButton" x:Uid="LoupeButton" Width="44" LabelPosition="Collapsed" Click="Loupe_Click">
-                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarToggleButton.Icon>
-                    </AppBarToggleButton>
-                    <AppBarButton x:Uid="SaveAsButton" Width="44" LabelPosition="Collapsed" Icon="SaveLocal" Click="SaveAs_Click" />
-                    <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" Width="44" LabelPosition="Collapsed" Click="Play_Click" Visibility="Collapsed">
-                        <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
-                    </AppBarButton>
-                    <AppBarButton x:Uid="SlideshowButton" Width="44" LabelPosition="Collapsed" Click="Slideshow_Click">
-                        <AppBarButton.Icon><FontIcon Glyph="&#xE786;" /></AppBarButton.Icon>
-                    </AppBarButton>
-                    <AppBarSeparator />
-                    <AppBarButton x:Uid="DeleteButton" Width="44" LabelPosition="Collapsed" Icon="Delete" Click="Delete_Click" />
-                    <AppBarToggleButton x:Name="InfoButton" x:Uid="InfoButton" Width="44" LabelPosition="Collapsed" Click="Info_Click">
-                        <AppBarToggleButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarToggleButton.Icon>
-                    </AppBarToggleButton>
-                    <AppBarButton x:Uid="FullscreenButton" Width="44" LabelPosition="Collapsed" Icon="FullScreen" Click="Fullscreen_Click" />
-                </StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                        <Button x:Uid="PrevButton" Width="36" Height="36" Padding="0" Background="Transparent" BorderThickness="0" Click="Prev_Click">
+                            <SymbolIcon Symbol="Back" />
+                        </Button>
+                        <TextBlock MinWidth="48" VerticalAlignment="Center" TextAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="{x:Bind ViewModel.Position, Mode=OneWay}" />
+                        <Button x:Uid="NextButton" Width="36" Height="36" Padding="0" Background="Transparent" BorderThickness="0" Click="Next_Click">
+                            <SymbolIcon Symbol="Forward" />
+                        </Button>
+                        <Border Width="1" Height="20" Margin="4,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                        <Button x:Name="ZoomText" x:Uid="ZoomPercentButton" MinWidth="56" Height="36" Padding="6,4" Background="Transparent" BorderThickness="0"
+                                FontSize="12" Click="ZoomText_Click" Content="100%" />
+                    </StackPanel>
+
+                    <CommandBar x:Name="ActionBar" Grid.Column="1" DefaultLabelPosition="Collapsed"
+                                IsDynamicOverflowEnabled="True" OverflowButtonVisibility="Auto"
+                                Background="Transparent" VerticalAlignment="Center">
+                        <AppBarButton x:Uid="OpenToolbarButton" DynamicOverflowOrder="1" Icon="OpenFile" Click="Open_Click" />
+                        <AppBarButton x:Uid="ZoomOutButton" DynamicOverflowOrder="1" Icon="ZoomOut" Click="ZoomOut_Click" />
+                        <AppBarButton x:Uid="ZoomInButton" DynamicOverflowOrder="1" Icon="ZoomIn" Click="ZoomIn_Click" />
+                        <AppBarButton x:Uid="FitButton" DynamicOverflowOrder="1" Click="Fit_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator DynamicOverflowOrder="1" />
+                        <AppBarButton x:Uid="RotateButton" DynamicOverflowOrder="1" Icon="Rotate" Click="Rotate_Click" />
+                        <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" DynamicOverflowOrder="1" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
+                        <AppBarButton x:Uid="FlipHButton" DynamicOverflowOrder="3" Click="FlipH_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8AB;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="FlipVButton" DynamicOverflowOrder="3" Click="FlipV_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarToggleButton x:Name="CropButton" x:Uid="CropButton" DynamicOverflowOrder="2" Icon="Crop" Click="Crop_Click" />
+                        <AppBarToggleButton x:Name="CompareButton" x:Uid="CompareButton" DynamicOverflowOrder="3" Click="Compare_Click">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+                        <AppBarToggleButton x:Name="LoupeButton" x:Uid="LoupeButton" DynamicOverflowOrder="3" Click="Loupe_Click">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+                        <AppBarButton x:Uid="SaveAsButton" DynamicOverflowOrder="2" Icon="SaveLocal" Click="SaveAs_Click" />
+                        <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" DynamicOverflowOrder="2" Click="Play_Click" Visibility="Collapsed">
+                            <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="SlideshowButton" DynamicOverflowOrder="2" Click="Slideshow_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE786;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator DynamicOverflowOrder="2" />
+                        <AppBarButton x:Uid="DeleteButton" DynamicOverflowOrder="1" Icon="Delete" Click="Delete_Click" />
+                        <AppBarToggleButton x:Name="InfoButton" x:Uid="InfoButton" DynamicOverflowOrder="1" Click="Info_Click">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
+                        <AppBarButton x:Uid="FullscreenButton" DynamicOverflowOrder="1" Icon="FullScreen" Click="Fullscreen_Click" />
+                        <AppBarButton x:Uid="SettingsButton" DynamicOverflowOrder="2" Icon="Setting" Click="Settings_Click" />
+                    </CommandBar>
+                </Grid>
             </Border>
         </StackPanel>
 
@@ -408,12 +458,14 @@
             </Border>
         </Grid>
 
-        <!-- Crop mode bar. -->
-        <Border x:Name="CropBar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,44,0,0" Padding="16,6,6,6" CornerRadius="8"
+        <!-- Crop mode bar: aspect ratio presets + Save as / Cancel. -->
+        <Border x:Name="CropBar" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,44,0,0" Padding="12,6,6,6" CornerRadius="8"
                 Visibility="Collapsed" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
+                BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                PointerEntered="Chrome_PointerEntered" PointerExited="Chrome_PointerExited">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock x:Uid="CropHint" VerticalAlignment="Center" />
+                <ComboBox x:Name="CropAspectBox" x:Uid="CropAspectBox" MinWidth="112" SelectionChanged="CropAspectBox_SelectionChanged" />
                 <Button x:Uid="CropSaveButton" Style="{StaticResource AccentButtonStyle}" Click="SaveAs_Click" />
                 <Button x:Uid="CropCancelButton" Click="CropCancel_Click" />
             </StackPanel>
@@ -431,19 +483,20 @@
 
         <!-- Keyboard cheat sheet (? / F1). -->
         <Border x:Name="Shortcuts" Grid.ColumnSpan="2" Visibility="Collapsed" Background="{ThemeResource SmokeFillColorDefaultBrush}" Tapped="Shortcuts_Tapped">
-            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" CornerRadius="12" MaxWidth="560"
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" CornerRadius="12" MaxWidth="560" MaxHeight="640"
                     Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
-                <StackPanel Spacing="12">
-                    <TextBlock x:Uid="ShortcutsTitle" Style="{StaticResource SubtitleTextBlockStyle}" />
-                    <Grid x:Name="ShortcutGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                    </Grid>
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12">
+                        <TextBlock x:Uid="ShortcutsTitle" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <Grid x:Name="ShortcutGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Border>
     </Grid>
 </Window>
-

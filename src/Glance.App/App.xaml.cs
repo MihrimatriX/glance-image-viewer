@@ -36,7 +36,7 @@ public partial class App : Application
 
         instance.Activated += (_, args) => _window?.DispatcherQueue.TryEnqueue(async () =>
         {
-            _window.Activate();
+            _window.BringToFront();
             if (FileFrom(args) is { } path)
                 await ViewModel.OpenAsync(path);
         });

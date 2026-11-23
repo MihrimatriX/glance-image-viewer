@@ -153,8 +153,8 @@ internal static unsafe partial class Native
     private static int _done;
 
     /// <summary>
-    /// The surrogate (dllhost.exe) doesn't search our package folder for DLLs: point the loader at the directory
-    /// this DLL lives in, where Magick.Native-*.dll sits next to us.
+    /// The surrogate (dllhost.exe) doesn't search our package folder for DLLs: preload Magick.Native-*.dll by full path
+    /// from the directory this DLL lives in, without mutating process-global DLL search paths (SetDllDirectoryW).
     /// </summary>
     public static void EnsureMagickResolvable()
     {
@@ -166,7 +166,10 @@ internal static unsafe partial class Native
         var path = stackalloc char[1024];
         var length = GetModuleFileNameW(module, path, 1024);
         if (length > 0 && Path.GetDirectoryName(new string(path, 0, (int)length)) is { } dir)
-            SetDllDirectoryW(dir);
+        {
+            foreach (var dll in Directory.EnumerateFiles(dir, "Magick.Native-*.dll"))
+                NativeLibrary.TryLoad(dll, out _);
+        }
     }
 
     [LibraryImport("kernel32.dll")]
@@ -175,8 +178,4 @@ internal static unsafe partial class Native
 
     [LibraryImport("kernel32.dll")]
     private static partial uint GetModuleFileNameW(nint module, char* path, uint size);
-
-    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetDllDirectoryW(string path);
 }

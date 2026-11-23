@@ -51,14 +51,15 @@ internal sealed partial class ThumbnailProvider : IInitializeWithStream, IThumbn
         Native.EnsureMagickResolvable();
         MagickSetup.Limits = MagickLimits.Thumbnail;   // takes effect on the first decode in this host, ignored after
         var options = new DecodeOptions(size, size) { Extension = extension };
-        if (ImageFormats.Raw.Contains(extension))
+        var isRawExt = ImageFormats.Raw.Contains(extension);
+        if (isRawExt || (extension.Length == 0 && LooksLikeTiffOrCr3(data)))
         {
             // Camera's own JPEG preview: milliseconds instead of a multi-second demosaic.
             var (start, length) = RawPreviewDecoder.FindLargestJpeg(data);
-            if (length > 0)
+            if (length >= (isRawExt ? 1 : 64 * 1024))
             {
                 using var preview = new MemoryStream(data, start, length, writable: false);
-                return Run(preview, options with { Extension = ".jpg" } , RawPreviewDecoder.TiffOrientation(data));
+                return Run(preview, options with { Extension = ".jpg" }, RawPreviewDecoder.TiffOrientation(data));
             }
         }
         using var stream = new MemoryStream(data, writable: false);
@@ -66,6 +67,10 @@ internal sealed partial class ThumbnailProvider : IInitializeWithStream, IThumbn
 
         static DecodedImage Run(Stream s, DecodeOptions o, ushort? orientation) =>
             new MagickDecoder().DecodeAsync(s, o with { Orientation = orientation }, CancellationToken.None).GetAwaiter().GetResult();
+
+        static bool LooksLikeTiffOrCr3(ReadOnlySpan<byte> d) =>
+            d.Length >= 12 && (d.StartsWith("II*\0"u8) || d.StartsWith("MM\0*"u8) || d.StartsWith("IIRO"u8)
+                || (d[4..8].SequenceEqual("ftyp"u8) && d[8..12].SequenceEqual("crx "u8)));
     }
 
     private static int Fail(Exception ex)
