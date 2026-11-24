@@ -26,13 +26,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private CancellationTokenSource _loadCts = new(), _prefetchCts = new();
     private int _direction;
     private string? _pendingDelete;
-    private string? _fullRequested;
+    private (string Path, int Page)? _fullRequested;
     private bool _loading;
 
     public MainViewModel(ImageLoader loader, DecoderRouter router)
     {
         _loader = loader;
         _router = router;
+        var initial = Settings.Load();
+        _nav.SetSort(initial.SortBy, initial.SortDescending);
+        ShowFilmStrip = initial.ShowFilmStrip;
         _nav.Changed += (_, _) => _ui.TryEnqueue(() => { RefreshFilm(); UpdatePosition(); });
         _undoTimer = _ui.CreateTimer();
         _undoTimer.Interval = UndoWindow;
@@ -51,8 +54,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string? UndoMessage { get; private set; }
     [ObservableProperty] public partial ImageInfo? Info { get; private set; }
     [ObservableProperty] public partial PhotoMetadata? Photo { get; private set; }
+    [ObservableProperty] public partial int PageIndex { get; private set; }
+    [ObservableProperty] public partial int PageCount { get; private set; } = 1;
+    [ObservableProperty] public partial string? PagePosition { get; private set; }
+    [ObservableProperty] public partial bool ShowFilmStrip { get; set; } = true;
 
     public bool IsWelcome => State == ViewState.Welcome;
+    public bool HasMultiplePages => PageCount > 1;
     public string? CurrentPath => _nav.Current;
 
     /// <summary>+1 after moving forward, -1 backward, 0 for a fresh open — drives the slide transition.</summary>
@@ -68,6 +76,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             ViewState.EmptyFolder => Strings.Get("Status_EmptyFolder"),
             _ => null,
         };
+    }
+
+    partial void OnPageCountChanged(int value) => OnPropertyChanged(nameof(HasMultiplePages));
+
+    public void SetSort(SortBy sortBy, bool descending)
+    {
+        _nav.SetSort(sortBy, descending);
+        RefreshFilm();
+        UpdatePosition();
     }
 
     /// <summary>Opens a file, or the first image of a folder.</summary>
@@ -96,7 +113,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Log.Error($"Cannot list folder of {path}", ex);
         }
         _direction = 0;
-        await ShowAsync(path);
+        await ShowAsync(path, page: 0);
         _ = WarmUpMagickIfNeededAsync(path);
     }
 
@@ -113,6 +130,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public Task FirstAsync() => Go(_nav.MoveFirst(), +1);
     public Task LastAsync() => Go(_nav.MoveLast(), -1);
 
+    public Task NextPageAsync() => GoToPageAsync(PageIndex + 1);
+    public Task PreviousPageAsync() => GoToPageAsync(PageIndex - 1);
+
+    public Task GoToPageAsync(int page)
+    {
+        if (CurrentPath is not { } path || PageCount <= 1 || page < 0 || page >= PageCount || page == PageIndex)
+            return Task.CompletedTask;
+        _direction = 0;
+        return ShowAsync(path, page);
+    }
+
     private Task MoveAsync(int offset) => Go(_nav.Move(offset), Math.Sign(offset));
 
     private Task Go(string? path, int direction)
@@ -120,10 +148,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (path is null)
             return Task.CompletedTask;
         _direction = direction;
-        return ShowAsync(path);
+        return ShowAsync(path, page: 0);
     }
 
-    private async Task ShowAsync(string path)
+    private async Task ShowAsync(string path, int page = 0)
     {
         // Aggressive cancellation: a new navigation kills the previous load and its prefetch immediately.
         await _loadCts.CancelAsync();
@@ -140,13 +168,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            var image = await _loader.LoadAsync(path, full: false, ct);
-            MarkReady(path, true);
+            var image = await _loader.LoadAsync(path, full: false, ct, page);
+            if (page == 0)
+                MarkReady(path, true);
             _loader.Current = image;
+            _fullRequested = null;
+            PageIndex = image.PageIndex;
+            PageCount = image.PageCount;
+            PagePosition = image.PageCount > 1 ? $"{image.PageIndex + 1} / {image.PageCount}" : null;
             Image = image;
             State = ViewState.Ready;
             Info = ImageInfo.From(path, image);
-            _ = LoadMetadataAsync(path, ct);
+            if (page == 0)
+                _ = LoadMetadataAsync(path, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -201,6 +235,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         Image = null;
         _loader.Current = null;
+        PageIndex = 0;
+        PageCount = 1;
+        PagePosition = null;
         Info = ImageInfo.From(path, null);
         State = state;
     }
@@ -249,15 +286,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Called when zoom passes the decoded resolution: swaps in a full-resolution decode, keeping the viewport.</summary>
     public async Task LoadFullResolutionAsync()
     {
-        if (Image is not { IsFull: false } current || _fullRequested == current.Path
+        if (Image is not { IsFull: false } current || _fullRequested == (current.Path, current.PageIndex)
             || Math.Max(current.OriginalWidth, current.OriginalHeight) > ImageLoader.MaxBitmapSize)
             return;
-        _fullRequested = current.Path;
+        _fullRequested = (current.Path, current.PageIndex);
         var ct = _loadCts.Token;
         try
         {
-            var full = await _loader.LoadAsync(current.Path, full: true, ct);
-            if (Image?.Path == full.Path)
+            var full = await _loader.LoadAsync(current.Path, full: true, ct, current.PageIndex);
+            if (Image?.Path == full.Path && Image.PageIndex == full.PageIndex)
             {
                 _loader.Current = full;
                 Image = full;
@@ -276,7 +313,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _loader.Clear();
         if (_nav.Current is { } path)
-            _ = ShowAsync(path);
+            _ = ShowAsync(path, PageIndex);
     }
 
     // ---- Delete with undo: the file only goes to the Recycle Bin when the undo window closes. ----
@@ -339,6 +376,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _loader.Current = null;
         FileName = null;
         Info = null;
+        PageIndex = 0;
+        PageCount = 1;
+        PagePosition = null;
         State = ViewState.EmptyFolder;
         UpdatePosition();
     }

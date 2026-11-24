@@ -19,15 +19,16 @@ public sealed record SaveFormat(string Name, string Extension, bool Lossy)
                               || (f.Extension == ".tif" && ext.Equals(".tiff", StringComparison.OrdinalIgnoreCase)));
 }
 
-/// <summary>What the user did in the viewer, in the coordinates they saw (oriented original pixels, after rotation).</summary>
-public sealed record EditRequest(int QuarterTurns, PixelRect? Crop = null, int? Width = null, int? Height = null, int Quality = 92);
+/// <summary>What the user did in the viewer, in the coordinates they saw (oriented original pixels, after rotation and flips).</summary>
+public sealed record EditRequest(int QuarterTurns, PixelRect? Crop = null, int? Width = null, int? Height = null, int Quality = 92,
+    bool FlipHorizontal = false, bool FlipVertical = false);
 
 public readonly record struct PixelRect(int X, int Y, int Width, int Height);
 
 public static class ImageEditor
 {
     /// <summary>
-    /// Decodes <paramref name="source"/> at full resolution, applies orientation → rotation → crop → resize, and writes
+    /// Decodes <paramref name="source"/> at full resolution, applies orientation → rotation → flip → crop → resize, and writes
     /// <paramref name="destination"/> in <paramref name="format"/>. ICC and EXIF are kept; EXIF orientation is reset.
     /// Animated images keep only the first frame.
     /// </summary>
@@ -44,8 +45,13 @@ public static class ImageEditor
         }
         using var image = new MagickImage(source, settings);
         image.AutoOrient();
-        if (edit.QuarterTurns % 4 != 0)
-            image.Rotate(90 * (edit.QuarterTurns % 4));
+        var turns = ((edit.QuarterTurns % 4) + 4) % 4;
+        if (turns != 0)
+            image.Rotate(90 * turns);
+        if (edit.FlipHorizontal)
+            image.Flop();
+        if (edit.FlipVertical)
+            image.Flip();
         if (edit.Crop is { } c)
         {
             image.Crop(new MagickGeometry(c.X, c.Y, (uint)c.Width, (uint)c.Height));

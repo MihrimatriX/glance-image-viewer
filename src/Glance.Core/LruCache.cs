@@ -79,6 +79,25 @@ public sealed class LruCache<TKey, TValue>(long budgetBytes, Func<TValue, long> 
         onEvict?.Invoke(removed);
     }
 
+    public void RemoveWhere(Func<TKey, bool> predicate)
+    {
+        List<TValue> removed = [];
+        lock (_lock)
+        {
+            var keys = _map.Keys.Where(predicate).ToList();
+            foreach (var key in keys)
+            {
+                if (!_map.Remove(key, out var node))
+                    continue;
+                _order.Remove(node);
+                SizeBytes -= sizeOf(node.Value.Value);
+                removed.Add(node.Value.Value);
+            }
+        }
+        foreach (var v in removed)
+            onEvict?.Invoke(v);
+    }
+
     public void Clear()
     {
         List<TValue> all;

@@ -14,9 +14,16 @@ public static partial class FileRegistration
 {
     public const string AppName = "Glance";
     public const string ThumbnailClsid = "{fa45545e-4edc-4912-90ad-24efae6273d0}";
+    public const string PrintDropTargetClsid = "{60fd46de-f830-4894-a628-6fa81bc0190d}";
     private const string ThumbnailShellEx = "{e357fccd-a995-4576-b01f-234630154e96}";
     private const string AppKey = @"Software\Glance";
     private const string Classes = @"Software\Classes";
+
+    // Image types Windows' built-in Print Pictures wizard handles natively; wiring its DropTarget keeps Explorer's Print verb working when Glance is default.
+    private static readonly HashSet<string> ShellPrintable = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".bmp", ".dib", ".gif", ".tif", ".tiff",
+    };
 
     /// <param name="root">HKCU in the app; a scratch key in tests.</param>
     /// <param name="exePath">Absolute path to Glance.exe.</param>
@@ -43,6 +50,11 @@ public static partial class FileRegistration
                         i.SetValue("", icon);
                     using (var c = p.CreateSubKey(@"shell\open\command"))
                         c.SetValue("", $"\"{exePath}\" \"%1\"");
+                    if (ShellPrintable.Contains(ext))
+                    {
+                        using var print = p.CreateSubKey(@"shell\print\DropTarget");
+                        print.SetValue("Clsid", PrintDropTargetClsid);
+                    }
                 }
                 assoc.SetValue(ext, progId);
                 using var openWith = root.CreateSubKey($@"{Classes}\{ext}\OpenWithProgids");

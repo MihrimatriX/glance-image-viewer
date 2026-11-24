@@ -29,30 +29,31 @@
 
 | | |
 |---|---|
-| **Viewing** | Zoom around the cursor, pan with momentum, fit / 100 % toggle, rotate, full screen, touch and touchpad gestures |
-| **Browsing** | Folder navigation in File Explorer order, filmstrip with thumbnails, drag & drop, recent files, single window |
-| **Looks** | Mica / Acrylic backdrop, ambient light that picks up the photo's colours, slide transitions, light & dark theme |
-| **Slideshow** | Full screen with a gentle Ken Burns drift (**S**) |
+| **Viewing** | Zoom around the cursor, pan with momentum, fit / 100 % toggle, rotate, flip (**H** / **V**), transparency checkerboard, full screen, touch and touchpad gestures |
+| **Browsing** | Folder navigation sorted by name, date or size, filmstrip with thumbnails, drag & drop, clipboard paste (**Ctrl+V**), recent files, multi-page PDF & TIFF navigation, single window |
+| **Looks** | Mica / Acrylic backdrop, ambient light that picks up the photo's colours, slide transitions, system / light / dark theme, responsive toolbar |
+| **Slideshow** | Full screen with configurable interval and optional Ken Burns drift (**S**) |
 | **Info panel** | Live RGB histogram, camera, lens, exposure (f-number · shutter · ISO · focal length), date taken, GPS location (**I**) |
-| **Editing** | Lossless JPEG rotation, crop (**C**), save as JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP with quality and resize (**Ctrl+S**). Originals are never overwritten silently: in-place saves move the original to the Recycle Bin first |
+| **Editing** | Lossless JPEG rotation, interactive crop with handles & aspect ratios (**C**), rename (**F2**), save as JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP with quality and resize (**Ctrl+S**). Originals are never overwritten silently: in-place saves move the original to the Recycle Bin first |
 | **Compare** | Two photos side by side with synchronised zoom and pan (**K**) |
 | **Loupe** | 8× magnifier with colour picker; click copies `#RRGGBB` (**L**) |
 | **Colour theme** | The photo's dominant colours plus a colour-wheel harmony (complementary, triad, …) in the info panel; copy or save the whole theme as CSS custom properties, a Tailwind v4 `@theme` block, SCSS variables, JSON or a plain hex list |
 | **Animation** | GIF and animated WebP with play / pause and frame stepping |
 | **Colour** | Embedded ICC profiles converted to sRGB (iPhone Display P3 looks right), HDR tone-mapped |
 | **Safety net** | Delete goes to the Recycle Bin with a 5-second undo |
+| **Settings** | Theme, mouse wheel mode (zoom vs. browse), ambient light, filmstrip, checkerboard, slideshow, sort order, and Windows default-app registration (**Ctrl+,**) |
 | **Languages** | English and Turkish |
 
 ## Supported formats
 
 | Kind | Formats |
 |---|---|
-| Everyday | JPEG, PNG / APNG, GIF, BMP, TIFF, ICO |
+| Everyday | JPEG, PNG / APNG, GIF, BMP, TIFF (multi-page), ICO |
 | Modern | **HEIC / HEIF**, **AVIF**, **WebP**, **JPEG XL**, JPEG XR, JPEG 2000, QOI |
 | Camera RAW | CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, SRW, 3FR, IIQ, X3F and more — the camera's preview appears instantly, full RAW development when you zoom in |
 | Pro & creative | PSD / PSB, TGA, EXR, Radiance HDR, SVG, DDS, PCX, PNM |
 | Older & specialist | XPM / XBM, SGI, Sun raster, WBMP, MNG / JNG, DPX, Cineon, FITS, CUR (cursors), JPX / JPM |
-| Documents | PDF (first page), Illustrator `.ai` saved PDF-compatible, EPS with an embedded preview — through Windows' own PDF renderer, never Ghostscript |
+| Documents | PDF (multi-page), Illustrator `.ai` saved PDF-compatible, EPS with an embedded preview — through Windows' own PDF renderer, never Ghostscript |
 
 Glance never *writes* HEIC (patent-encumbered); it reads it.
 
@@ -64,19 +65,20 @@ Press **?** in the app to see them all.
 |---|---|
 | ← → · PgUp PgDn | Previous / next image |
 | Home · End | First / last image in the folder |
-| Mouse wheel · + − | Zoom |
+| [ ] · Alt+←/→ | Previous / next page (PDF, TIFF) |
+| Mouse wheel · + − | Zoom (or browse when configured in Settings) |
 | 0 · 1 · double-click | Fit to window · actual size · toggle |
-| R · Shift+R | Rotate right / left |
+| R · Shift+R · H · V | Rotate right / left · flip horizontal / vertical |
 | F · F11 · Esc | Full screen / leave |
 | S | Slideshow |
 | B | Ambient light on / off |
 | I | Info panel |
-| C · Ctrl+S | Crop · Save as |
+| C · F2 · Ctrl+S | Crop · Rename · Save as |
 | K · L | Compare · Loupe and colour picker |
 | Space · , · . | Play / pause animation · previous / next frame |
 | Del · Ctrl+Z | Move to Recycle Bin · undo |
-| Ctrl+C · Ctrl+Shift+C | Copy image · copy file path |
-| Ctrl+O · Ctrl+E | Open · show in File Explorer |
+| Ctrl+C · Ctrl+Shift+C · Ctrl+V | Copy image · copy file path · paste image |
+| Ctrl+O · Ctrl+E · Ctrl+, | Open · show in File Explorer · Settings |
 
 ## Install
 

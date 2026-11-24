@@ -140,4 +140,64 @@
   <data name="Swatch_Tooltip" xml:space="preserve"><value>{0} · kopyalamak için tıklayın</value></data>
   <data name="Theme_FileSuffix" xml:space="preserve"><value>-tema</value></data>
   <data name="WelcomeHint.Text" xml:space="preserve"><value>HEIC, AVIF, WebP, JPEG XL, RAW, PSD, PDF ve daha fazlası · kısayollar için ? tuşuna basın</value></data>
+  <data name="PrevButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Önceki görüntü</value></data>
+  <data name="NextButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sonraki görüntü</value></data>
+  <data name="PrevPageButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Önceki sayfa ([ veya Alt+←)</value></data>
+  <data name="PrevPageButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Önceki sayfa</value></data>
+  <data name="NextPageButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sonraki sayfa (] veya Alt+→)</value></data>
+  <data name="NextPageButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sonraki sayfa</value></data>
+  <data name="FlipHButton.Label" xml:space="preserve"><value>Yatay çevir (H)</value></data>
+  <data name="FlipHButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Yatay çevir (H)</value></data>
+  <data name="FlipVButton.Label" xml:space="preserve"><value>Dikey çevir (V)</value></data>
+  <data name="FlipVButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Dikey çevir (V)</value></data>
+  <data name="SettingsButton.Label" xml:space="preserve"><value>Ayarlar (Ctrl+,)</value></data>
+  <data name="SettingsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Ayarlar (Ctrl+,)</value></data>
+  <data name="MenuPaste.Text" xml:space="preserve"><value>Resmi yapıştır</value></data>
+  <data name="MenuFlipH.Text" xml:space="preserve"><value>Yatay çevir</value></data>
+  <data name="MenuFlipV.Text" xml:space="preserve"><value>Dikey çevir</value></data>
+  <data name="MenuRename.Text" xml:space="preserve"><value>Yeniden adlandır…</value></data>
+  <data name="MenuSettings.Text" xml:space="preserve"><value>Ayarlar…</value></data>
+  <data name="CropAspectBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Kırpma en-boy oranı</value></data>
+  <data name="CropAspect_Free" xml:space="preserve"><value>Serbest</value></data>
+  <data name="CropAspect_Original" xml:space="preserve"><value>Orijinal</value></data>
+  <data name="CropAspect_1x1" xml:space="preserve"><value>1:1</value></data>
+  <data name="CropAspect_4x3" xml:space="preserve"><value>4:3</value></data>
+  <data name="CropAspect_3x2" xml:space="preserve"><value>3:2</value></data>
+  <data name="CropAspect_16x9" xml:space="preserve"><value>16:9</value></data>
+  <data name="Notice_Pasted" xml:space="preserve"><value>Panodan yapıştırıldı</value></data>
+  <data name="Notice_PasteFailed" xml:space="preserve"><value>Panodan görüntü yapıştırılamadı</value></data>
+  <data name="Notice_Renamed" xml:space="preserve"><value>Yeniden adlandırıldı: {0}</value></data>
+  <data name="Notice_Unregistered" xml:space="preserve"><value>Dosya ve küçük resim kayıtları kaldırıldı</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>Dosyayı yeniden adlandır</value></data>
+  <data name="Rename_Action" xml:space="preserve"><value>Yeniden adlandır</value></data>
+  <data name="Rename_Invalid" xml:space="preserve"><value>Lütfen geçerli bir dosya adı girin.</value></data>
+  <data name="Rename_Exists" xml:space="preserve"><value>Bu adda bir dosya zaten var.</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>Dosya yeniden adlandırılamadı.</value></data>
+  <data name="Sc_Pages" xml:space="preserve"><value>Önceki / sonraki sayfa (PDF, TIFF)</value></data>
+  <data name="Sc_Flip" xml:space="preserve"><value>Yatay / dikey çevir</value></data>
+  <data name="Sc_Rename" xml:space="preserve"><value>Dosyayı yeniden adlandır</value></data>
+  <data name="Sc_Paste" xml:space="preserve"><value>Panodan görüntü yapıştır</value></data>
+  <data name="Sc_Settings" xml:space="preserve"><value>Ayarlar</value></data>
+  <data name="Settings_Title" xml:space="preserve"><value>Ayarlar</value></data>
+  <data name="Settings_Theme" xml:space="preserve"><value>Tema</value></data>
+  <data name="Settings_ThemeSystem" xml:space="preserve"><value>Sistem ayarını kullan</value></data>
+  <data name="Settings_ThemeLight" xml:space="preserve"><value>Açık</value></data>
+  <data name="Settings_ThemeDark" xml:space="preserve"><value>Koyu</value></data>
+  <data name="Settings_Wheel" xml:space="preserve"><value>Fare tekerleği</value></data>
+  <data name="Settings_WheelZoom" xml:space="preserve"><value>Yakınlaştır / uzaklaştır</value></data>
+  <data name="Settings_WheelNavigate" xml:space="preserve"><value>Önceki / sonraki görüntü (Ctrl+tekerlek yakınlaştırır)</value></data>
+  <data name="Settings_Ambient" xml:space="preserve"><value>Görüntü arkasında ortam ışığı</value></data>
+  <data name="Settings_FilmStrip" xml:space="preserve"><value>Film şeridini göster</value></data>
+  <data name="Settings_Checkerboard" xml:space="preserve"><value>Saydamlık dama tahtası</value></data>
+  <data name="Settings_SlideSeconds" xml:space="preserve"><value>Slayt gösterisi süresi (saniye)</value></data>
+  <data name="Settings_KenBurns" xml:space="preserve"><value>Slayt gösterisinde Ken Burns hareketi</value></data>
+  <data name="Settings_SortBy" xml:space="preserve"><value>Klasör sıralaması</value></data>
+  <data name="Settings_SortName" xml:space="preserve"><value>Ad (Dosya Gezgini sırası)</value></data>
+  <data name="Settings_SortDate" xml:space="preserve"><value>Değiştirilme tarihi</value></data>
+  <data name="Settings_SortSize" xml:space="preserve"><value>Dosya boyutu</value></data>
+  <data name="Settings_SortDescending" xml:space="preserve"><value>Ters sıra</value></data>
+  <data name="Settings_WindowsHeader" xml:space="preserve"><value>Windows entegrasyonu</value></data>
+  <data name="Settings_RegisterDefaults" xml:space="preserve"><value>Varsayılan uygulamaları aç…</value></data>
+  <data name="Settings_Unregister" xml:space="preserve"><value>Kaydı kaldır</value></data>
+  <data name="Settings_Close" xml:space="preserve"><value>Kapat</value></data>
 </root>

@@ -16,11 +16,12 @@ public sealed partial class MainWindow
     {
         var ready = _image is not null;
         foreach (var item in ImageMenu.Items.OfType<MenuFlyoutItem>())
-            item.IsEnabled = ready;
+            item.IsEnabled = ready || Equals(item.Tag, "AlwaysEnabled");
     }
 
     private async void MenuCopy_Click(object sender, RoutedEventArgs e) => await ViewModel.CopyImageAsync();
     private void MenuCopyPath_Click(object sender, RoutedEventArgs e) => ViewModel.CopyPath();
+    private async void MenuPaste_Click(object sender, RoutedEventArgs e) => await ViewModel.PasteFromClipboardAsync();
     private void MenuReveal_Click(object sender, RoutedEventArgs e) => ViewModel.ShowInExplorer();
     private async void MenuWallpaper_Click(object sender, RoutedEventArgs e) => await ViewModel.SetAsWallpaperAsync();
     private async void MenuPrint_Click(object sender, RoutedEventArgs e) => await ViewModel.PrintAsync();

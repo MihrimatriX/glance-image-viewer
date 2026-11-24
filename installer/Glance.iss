@@ -47,7 +47,8 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "tr"; MessagesFile: "compiler:Languages\Turkish.isl"
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion restartreplace
+Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Glance"; Filename: "{app}\Glance.exe"

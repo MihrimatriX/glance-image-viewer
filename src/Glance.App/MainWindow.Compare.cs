@@ -17,6 +17,7 @@ public sealed partial class MainWindow
 
     private LoadedImage? _pinned;     // left pane in compare mode
     private int _pinnedRotation;
+    private bool _pinnedFlipH, _pinnedFlipV;
     private bool _loupe;
     private Point? _pointer;          // last pointer position over the canvas (DIPs)
     private string? _loupeHex;
@@ -46,6 +47,8 @@ public sealed partial class MainWindow
                 ToggleCrop();
             _pinned = _image;
             _pinnedRotation = _rotation;
+            _pinnedFlipH = _flipH;
+            _pinnedFlipV = _flipV;
             _loader.Pinned = _image;   // eviction must not dispose what the left pane draws
         }
         CompareLabels.Visibility = Comparing ? Visibility.Visible : Visibility.Collapsed;
@@ -81,9 +84,9 @@ public sealed partial class MainWindow
         var shift = half * DpiScale;   // physical px
 
         using (ds.CreateLayer(1, new Rect(0, 0, half, height)))
-            DrawImage(ds, pinned, pinned.Bitmap, PinnedView(image), _pinnedRotation, 1);
+            DrawImage(ds, pinned, pinned.Bitmap, PinnedView(image), _pinnedRotation, _pinnedFlipH, _pinnedFlipV, 1);
         using (ds.CreateLayer(1, new Rect(half, 0, half, height)))
-            DrawImage(ds, image, CurrentBitmap(image), _view.Pan(shift, 0), _rotation, 1);
+            DrawImage(ds, image, CurrentBitmap(image), _view.Pan(shift, 0), _rotation, _flipH, _flipV, 1);
         ds.DrawLine(half, 0, half, height, Windows.UI.Color.FromArgb(160, 255, 255, 255), 1.5f);
         return true;
     }
@@ -110,7 +113,7 @@ public sealed partial class MainWindow
     /// <summary>Colour of the bitmap pixel under the pointer (GPU readback of a single pixel).</summary>
     private string? SampleHex(LoadedImage image, Point dip)
     {
-        if (!Matrix3x2.Invert(ImageTransform(image, _view, _rotation), out var inverse))
+        if (!Matrix3x2.Invert(ImageTransform(image, _view, _rotation, _flipH, _flipV), out var inverse))
             return null;
         var p = Vector2.Transform(new Vector2((float)dip.X, (float)dip.Y), inverse);   // original image px
         var bitmap = CurrentBitmap(image);
@@ -137,7 +140,7 @@ public sealed partial class MainWindow
         {
             ds.FillCircle(center, LoupeRadius, Colors.Black);
             // Same image transform, magnified around the pointer and moved into the lens.
-            ds.Transform = ImageTransform(image, _view, _rotation)
+            ds.Transform = ImageTransform(image, _view, _rotation, _flipH, _flipV)
                 * Matrix3x2.CreateScale(LoupeZoom, pointer)
                 * Matrix3x2.CreateTranslation(center - pointer);
             var bitmap = CurrentBitmap(image);

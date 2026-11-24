@@ -21,7 +21,9 @@ public sealed class PdfDecoder(WicDecoder wic) : IImageDecoder
     public async Task<DecodedImage> DecodeAsync(Stream source, DecodeOptions options, CancellationToken ct)
     {
         var document = await PdfDocument.LoadFromStreamAsync(source.AsRandomAccessStream()).AsTask(ct).ConfigureAwait(false);
-        using var page = document.GetPage(0);
+        var pageCount = Math.Max(1, (int)document.PageCount);
+        var pageIndex = (uint)Math.Clamp(options.FrameIndex, 0, pageCount - 1);
+        using var page = document.GetPage(pageIndex);
 
         // Size is in DIPs (1/96 inch), with the page's rotation already applied.
         var size = page.Size;
@@ -42,6 +44,6 @@ public sealed class PdfDecoder(WicDecoder wic) : IImageDecoder
 
         var bmp = GC.AllocateUninitializedArray<byte>(checked((int)rendered.Size), pinned: true);
         await rendered.GetInputStreamAt(0).AsStreamForRead().ReadExactlyAsync(bmp, ct).ConfigureAwait(false);
-        return wic.Decode(bmp, new DecodeOptions()) with { OriginalWidth = fullWidth, OriginalHeight = fullHeight };
+        return wic.Decode(bmp, new DecodeOptions()) with { OriginalWidth = fullWidth, OriginalHeight = fullHeight, PageCount = pageCount };
     }
 }

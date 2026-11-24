@@ -5,4 +5,8 @@
     <Project Path="src/Glance.Imaging/Glance.Imaging.csproj" />
     <Project Path="src/Glance.Thumbnails/Glance.Thumbnails.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Glance.Core.Tests/Glance.Core.Tests.csproj" />
+    <Project Path="tests/Glance.Imaging.Tests/Glance.Imaging.Tests.csproj" />
+  </Folder>
 </Solution>

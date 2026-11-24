@@ -29,30 +29,31 @@
 
 | | |
 |---|---|
-| **Görüntüleme** | İmleç etrafında yakınlaştırma, momentumlu kaydırma, sığdır / %100 geçişi, döndürme, tam ekran, dokunmatik ve touchpad hareketleri |
-| **Gezinme** | Dosya Gezgini sırasıyla klasör gezinme, küçük resimli film şeridi, sürükle-bırak, son açılanlar, tek pencere |
-| **Görünüm** | Mica / Acrylic arka plan, fotoğrafın renklerini yayan ortam ışığı, kayarak geçişler, açık ve koyu tema |
-| **Slayt gösterisi** | Yumuşak Ken Burns hareketiyle tam ekran (**S**) |
+| **Görüntüleme** | İmleç etrafında yakınlaştırma, momentumlu kaydırma, sığdır / %100 geçişi, döndürme, yatay/dikey çevirme (**H** / **V**), saydamlık dama tahtası, tam ekran, dokunmatik ve touchpad hareketleri |
+| **Gezinme** | Ada, tarihe veya boyuta göre sıralanabilir klasör gezinme, küçük resimli film şeridi, sürükle-bırak, panodan yapıştırma (**Ctrl+V**), son açılanlar, çok sayfalı PDF ve TIFF gezinme, tek pencere |
+| **Görünüm** | Mica / Acrylic arka plan, fotoğrafın renklerini yayan ortam ışığı, kayarak geçişler, sistem / açık / koyu tema, duyarlı araç çubuğu |
+| **Slayt gösterisi** | Ayarlanabilir süre ve isteğe bağlı Ken Burns hareketiyle tam ekran (**S**) |
 | **Bilgi paneli** | Canlı RGB histogram, fotoğraf makinesi, lens, pozlama (diyafram · enstantane · ISO · odak uzaklığı), çekim tarihi, GPS konumu (**I**) |
-| **Düzenleme** | Kayıpsız JPEG döndürme, kırpma (**C**), kalite ve boyut ayarıyla JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP olarak farklı kaydet (**Ctrl+S**). Orijinal dosya habersizce değiştirilmez: yerinde kaydetmede orijinal önce Geri Dönüşüm Kutusu'na taşınır |
+| **Düzenleme** | Kayıpsız JPEG döndürme, tutamaçlı ve en-boy oranlı kırpma (**C**), yeniden adlandırma (**F2**), kalite ve boyut ayarıyla JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP olarak farklı kaydet (**Ctrl+S**). Orijinal dosya habersizce değiştirilmez: yerinde kaydetmede orijinal önce Geri Dönüşüm Kutusu'na taşınır |
 | **Karşılaştırma** | İki fotoğraf yan yana, yakınlaştırma ve kaydırma senkronize (**K**) |
 | **Büyüteç** | 8 kat büyüteç ve renk seçici; tıklayınca `#RRGGBB` kopyalanır (**L**) |
 | **Renk teması** | Bilgi panelinde fotoğrafın baskın renkleri ve renk çemberi uyumu (tamamlayıcı, üçlü, …); temanın tamamı CSS değişkenleri, Tailwind v4 `@theme` bloğu, SCSS değişkenleri, JSON ya da düz hex listesi olarak kopyalanır veya kaydedilir |
 | **Animasyon** | GIF ve animasyonlu WebP; oynat / duraklat ve kare kare ilerleme |
 | **Renk** | Gömülü ICC profilleri sRGB'ye dönüştürülür (iPhone'un Display P3 fotoğrafları doğru görünür), HDR ton eşlenir |
 | **Güvenlik ağı** | Silme Geri Dönüşüm Kutusu'na gider, 5 saniye içinde geri alınabilir |
+| **Ayarlar** | Tema, fare tekerleği modu (yakınlaştır / gez), ortam ışığı, film şeridi, dama tahtası, slayt gösterisi, sıralama ve Windows varsayılan uygulama kaydı (**Ctrl+,**) |
 | **Diller** | Türkçe ve İngilizce |
 
 ## Desteklenen formatlar
 
 | Tür | Formatlar |
 |---|---|
-| Günlük | JPEG, PNG / APNG, GIF, BMP, TIFF, ICO |
+| Günlük | JPEG, PNG / APNG, GIF, BMP, TIFF (çok sayfalı), ICO |
 | Modern | **HEIC / HEIF**, **AVIF**, **WebP**, **JPEG XL**, JPEG XR, JPEG 2000, QOI |
 | Fotoğraf makinesi RAW | CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, SRW, 3FR, IIQ, X3F ve fazlası — makinenin önizlemesi anında görünür, yakınlaştırınca tam RAW işlenir |
 | Profesyonel | PSD / PSB, TGA, EXR, Radiance HDR, SVG, DDS, PCX, PNM |
 | Eski ve özel | XPM / XBM, SGI, Sun raster, WBMP, MNG / JNG, DPX, Cineon, FITS, CUR (imleçler), JPX / JPM |
-| Belgeler | PDF (ilk sayfa), PDF uyumlu kaydedilmiş Illustrator `.ai`, gömülü önizlemesi olan EPS — Windows'un kendi PDF motoruyla, Ghostscript olmadan |
+| Belgeler | PDF (çok sayfalı), PDF uyumlu kaydedilmiş Illustrator `.ai`, gömülü önizlemesi olan EPS — Windows'un kendi PDF motoruyla, Ghostscript olmadan |
 
 Glance HEIC dosyası *yazmaz* (patentli bir format); yalnızca okur.
 
@@ -64,19 +65,20 @@ Uygulamada **?** tuşuna basarak hepsini görebilirsiniz.
 |---|---|
 | ← → · PgUp PgDn | Önceki / sonraki görüntü |
 | Home · End | Klasördeki ilk / son görüntü |
-| Fare tekerleği · + − | Yakınlaştır / uzaklaştır |
+| [ ] · Alt+←/→ | Önceki / sonraki sayfa (PDF, TIFF) |
+| Fare tekerleği · + − | Yakınlaştır / uzaklaştır (veya Ayarlar'dan gezinme) |
 | 0 · 1 · çift tık | Pencereye sığdır · gerçek boyut · ikisi arasında geçiş |
-| R · Shift+R | Sağa / sola döndür |
+| R · Shift+R · H · V | Sağa / sola döndür · yatay / dikey çevir |
 | F · F11 · Esc | Tam ekran / çıkış |
 | S | Slayt gösterisi |
 | B | Ortam ışığını aç / kapat |
 | I | Bilgi paneli |
-| C · Ctrl+S | Kırp · Farklı kaydet |
+| C · F2 · Ctrl+S | Kırp · Yeniden adlandır · Farklı kaydet |
 | K · L | Karşılaştır · Büyüteç ve renk seçici |
 | Boşluk · , · . | Animasyonu oynat / duraklat · önceki / sonraki kare |
 | Del · Ctrl+Z | Geri Dönüşüm Kutusu'na taşı · geri al |
-| Ctrl+C · Ctrl+Shift+C | Görüntüyü kopyala · dosya yolunu kopyala |
-| Ctrl+O · Ctrl+E | Aç · Dosya Gezgini'nde göster |
+| Ctrl+C · Ctrl+Shift+C · Ctrl+V | Görüntüyü kopyala · dosya yolunu kopyala · yapıştır |
+| Ctrl+O · Ctrl+E · Ctrl+, | Aç · Dosya Gezgini'nde göster · Ayarlar |
 
 ## Kurulum
 

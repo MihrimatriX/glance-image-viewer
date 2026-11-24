@@ -2,7 +2,7 @@
   <!-- Product name lives here (and in UI resource strings) only. -->
   <PropertyGroup>
     <Product>Glance</Product>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Copyright>Glance contributors</Copyright>
 
     <LangVersion>latest</LangVersion>

@@ -62,7 +62,9 @@ public sealed class WicDecoder : IImageDecoder
             decoder.GetContainerFormat(out var container);
             if (frameCount > 1 && container == PInvoke.GUID_ContainerFormatGif)
                 throw new NotSupportedException("Animated GIF: frame compositing is left to Magick.");
-            decoder.GetFrame(0, out var frame);
+            var isMultiPage = frameCount > 1 && container == PInvoke.GUID_ContainerFormatTiff;
+            var frameIndex = isMultiPage ? (uint)Math.Clamp(options.FrameIndex, 0, (int)frameCount - 1) : 0u;
+            decoder.GetFrame(frameIndex, out var frame);
             Track(frame);
 
             frame.GetSize(out var w, out var h);
@@ -96,7 +98,7 @@ public sealed class WicDecoder : IImageDecoder
             src.GetSize(out var dw, out var dh);
             var pixels = GC.AllocateUninitializedArray<byte>(checked((int)(dw * dh * 4)));
             src.CopyPixels(null, dw * 4, pixels);
-            return new DecodedImage(pixels, (int)dw, (int)dh, (int)ow, (int)oh);
+            return new DecodedImage(pixels, (int)dw, (int)dh, (int)ow, (int)oh) { PageCount = isMultiPage ? (int)frameCount : 1 };
         }
         finally
         {
