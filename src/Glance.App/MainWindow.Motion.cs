@@ -18,13 +18,13 @@ public sealed partial class MainWindow
     {
         var compositor = ElementCompositionPreview.GetElementVisual(element).Compositor;
         ElementCompositionPreview.SetIsTranslationEnabled(element, true);
-        ElementCompositionPreview.SetImplicitShowAnimation(element, Motion(compositor, offset, Vector3.Zero, 0, 1, ShowMs,
+        ElementCompositionPreview.SetImplicitShowAnimation(element, PanelMotion(compositor, offset, Vector3.Zero, 0, 1, ShowMs,
             compositor.CreateCubicBezierEasingFunction(new Vector2(0.1f, 0.9f), new Vector2(0.2f, 1f))));     // Fluent "decelerate"
-        ElementCompositionPreview.SetImplicitHideAnimation(element, Motion(compositor, Vector3.Zero, offset, 1, 0, HideMs,
+        ElementCompositionPreview.SetImplicitHideAnimation(element, PanelMotion(compositor, Vector3.Zero, offset, 1, 0, HideMs,
             compositor.CreateCubicBezierEasingFunction(new Vector2(0.7f, 0f), new Vector2(1f, 0.5f))));       // Fluent "accelerate"
     }
 
-    private static CompositionAnimationGroup Motion(Compositor compositor, Vector3 from, Vector3 to, float fromOpacity, float toOpacity,
+    private static CompositionAnimationGroup PanelMotion(Compositor compositor, Vector3 from, Vector3 to, float fromOpacity, float toOpacity,
         double ms, CompositionEasingFunction easing)
     {
         var duration = TimeSpan.FromMilliseconds(ms);

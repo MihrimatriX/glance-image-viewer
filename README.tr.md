@@ -30,8 +30,9 @@
 | | |
 |---|---|
 | **Görüntüleme** | İmleç etrafında yakınlaştırma, momentumlu kaydırma, sığdır / %100 geçişi, döndürme, yatay/dikey çevirme (**H** / **V**), saydamlık dama tahtası, tam ekran, dokunmatik ve touchpad hareketleri |
-| **Gezinme** | Ada, tarihe veya boyuta göre sıralanabilir klasör gezinme, küçük resimli film şeridi, sürükle-bırak, panodan yapıştırma (**Ctrl+V**), son açılanlar, çok sayfalı PDF ve TIFF gezinme, tek pencere |
-| **Görünüm** | Mica / Acrylic arka plan, fotoğrafın renklerini yayan ortam ışığı, kayarak geçişler, sistem / açık / koyu tema, duyarlı araç çubuğu |
+| **Gezinme** | Ada, tarihe veya boyuta göre sıralanabilir klasör gezinme, geçerli fotoğrafı ortada tutan kart film şeridi, parmakla veya iki parmakla touchpad'de kaydırarak gezinme, sürükle-bırak, panodan yapıştırma (**Ctrl+V**), son açılanlar, çok sayfalı PDF ve TIFF gezinme, tek pencere |
+| **Görünüm** | Mica / Acrylic arka plan, fotoğrafın renklerini yayan ortam ışığı, yay (spring) hissiyle geçişler (kayma, yumuşak geçiş, yakınlaştırma, paralaks — Ayarlar'dan seçilir; Windows'ta animasyonlar kapalıysa buna uyulur), tam görüntüye büyüyen film şeridi kartları, sistem / açık / koyu tema, duyarlı araç çubuğu |
+| **Zen modu** | Pencere çerçevesi, başlık çubuğu ve düğmeler yok, yalnızca fotoğraf. Kontroller sadece alt kenarda belirir (**Z**) |
 | **Slayt gösterisi** | Ayarlanabilir süre ve isteğe bağlı Ken Burns hareketiyle tam ekran (**S**) |
 | **Bilgi paneli** | Canlı RGB histogram, fotoğraf makinesi, lens, pozlama (diyafram · enstantane · ISO · odak uzaklığı), çekim tarihi, GPS konumu (**I**) |
 | **Düzenleme** | Kayıpsız JPEG döndürme, tutamaçlı ve en-boy oranlı kırpma (**C**), yeniden adlandırma (**F2**), kalite ve boyut ayarıyla JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP olarak farklı kaydet (**Ctrl+S**). Orijinal dosya habersizce değiştirilmez: yerinde kaydetmede orijinal önce Geri Dönüşüm Kutusu'na taşınır |
@@ -70,6 +71,7 @@ Uygulamada **?** tuşuna basarak hepsini görebilirsiniz.
 | 0 · 1 · çift tık | Pencereye sığdır · gerçek boyut · ikisi arasında geçiş |
 | R · Shift+R · H · V | Sağa / sola döndür · yatay / dikey çevir |
 | F · F11 · Esc | Tam ekran / çıkış |
+| Z | Zen modu |
 | S | Slayt gösterisi |
 | B | Ortam ışığını aç / kapat |
 | I | Bilgi paneli |

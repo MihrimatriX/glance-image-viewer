@@ -200,4 +200,15 @@
   <data name="Settings_RegisterDefaults" xml:space="preserve"><value>Varsayılan uygulamaları aç…</value></data>
   <data name="Settings_Unregister" xml:space="preserve"><value>Kaydı kaldır</value></data>
   <data name="Settings_Close" xml:space="preserve"><value>Kapat</value></data>
+  <data name="ZenButton.Label" xml:space="preserve"><value>Zen modu (Z)</value></data>
+  <data name="ZenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Zen modu (Z)</value></data>
+  <data name="MenuZen.Text" xml:space="preserve"><value>Zen modu</value></data>
+  <data name="Sc_Zen" xml:space="preserve"><value>Zen modu: çerçevesiz pencere, kontroller yalnızca kenarlarda</value></data>
+  <data name="Notice_ZenOn" xml:space="preserve"><value>Zen modu: kontroller alt kenarda belirir. Çıkmak için Z veya Esc, kısayollar için ?</value></data>
+  <data name="Settings_Transition" xml:space="preserve"><value>Görüntüler arası geçiş</value></data>
+  <data name="Settings_TransitionSlide" xml:space="preserve"><value>Kayma</value></data>
+  <data name="Settings_TransitionCrossfade" xml:space="preserve"><value>Yumuşak geçiş</value></data>
+  <data name="Settings_TransitionZoom" xml:space="preserve"><value>Yakınlaştırma</value></data>
+  <data name="Settings_TransitionParallax" xml:space="preserve"><value>Paralaks (üstüne kayar)</value></data>
+  <data name="Settings_TransitionNone" xml:space="preserve"><value>Yok</value></data>
 </root>

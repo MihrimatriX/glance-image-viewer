@@ -24,7 +24,9 @@ public sealed class SettingsTests : IDisposable
             KenBurns: false,
             SortBy: SortBy.DateModified,
             SortDescending: true,
-            Window: new WindowBounds(100, 120, 1280, 800, Maximized: true));
+            Window: new WindowBounds(100, 120, 1280, 800, Maximized: true),
+            Transition: TransitionKind.Parallax,
+            ZenMode: true);
 
         saved.Save(path);
         var loaded = Settings.Load(path);
@@ -38,6 +40,8 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(saved.KenBurns, loaded.KenBurns);
         Assert.Equal(saved.SortBy, loaded.SortBy);
         Assert.Equal(saved.SortDescending, loaded.SortDescending);
+        Assert.Equal(TransitionKind.Parallax, loaded.Transition);
+        Assert.True(loaded.ZenMode);
         Assert.Equal(saved.Window, loaded.Window);
     }
 

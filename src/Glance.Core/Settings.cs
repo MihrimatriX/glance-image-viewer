@@ -24,7 +24,9 @@ public sealed record Settings(
     bool KenBurns = true,
     SortBy SortBy = SortBy.Name,
     bool SortDescending = false,
-    WindowBounds? Window = null)
+    WindowBounds? Window = null,
+    TransitionKind Transition = TransitionKind.Slide,
+    bool ZenMode = false)
 {
     /// <summary>Folder for settings and logs: %LOCALAPPDATA%\Glance.</summary>
     public static string DataFolder { get; } =

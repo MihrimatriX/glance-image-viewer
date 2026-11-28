@@ -31,8 +31,7 @@ namespace Glance.App;
 public sealed partial class MainWindow : Window
 {
     private static readonly TimeSpan ChromeTimeout = TimeSpan.FromSeconds(1.5);
-    private const double FadeMs = 220, ZoomMs = 160, AmbientFadeMs = 450;
-    private const double SlideFraction = 0.06;    // navigation slide distance, as a fraction of the view width
+    private const double ZoomMs = 160, AmbientFadeMs = 450;
     private const double KenBurnsZoom = 0.06;     // slideshow drifts 6% closer over one slide
     private const double InertiaTauMs = 325;      // pan momentum decay (iOS-like feel)
 
@@ -58,11 +57,6 @@ public sealed partial class MainWindow : Window
     private Viewport _animFrom, _animTo;
     private double _animStart = -1;
     private bool _fitAfterAnim;
-
-    // Navigation transition: the outgoing image slides/fades out with its own viewport.
-    private (LoadedImage Image, Viewport View, int Rotation, bool FlipH, bool FlipV)? _outgoing;
-    private double _fadeStart;
-    private int _slideDirection;
 
     // Ambient light & transparency checkerboard GPU resources.
     private CanvasRenderTarget? _ambient, _ambientOut, _checkerTile;
@@ -110,6 +104,7 @@ public sealed partial class MainWindow : Window
         var settings = Settings.Load();
         ApplySettings(settings);
         RestoreWindowBounds(settings.Window);
+        InitZen(settings.ZenMode);
         UpdateDisplaySize();
 
         ViewModel.PropertyChanged += (_, e) =>
@@ -118,9 +113,7 @@ public sealed partial class MainWindow : Window
             {
                 case nameof(MainViewModel.Image): ShowImage(ViewModel.Image); break;
                 case nameof(MainViewModel.State): ShowChrome(); break;
-                case nameof(MainViewModel.Index) when ViewModel.Index >= 0 && ViewModel.Index < ViewModel.Film.Count:
-                    FilmStrip.ScrollIntoView(ViewModel.Film[ViewModel.Index]);
-                    break;
+                case nameof(MainViewModel.Index): OnCurrentCardChanged(); break;
             }
         };
 
@@ -132,7 +125,9 @@ public sealed partial class MainWindow : Window
         _slideTimer = DispatcherQueue.CreateTimer();
         _slideTimer.Interval = _slideInterval;
         _slideTimer.Tick += async (_, _) => await NextSlideAsync();
-        Root.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler((_, _) => ShowChrome()), handledEventsToo: true);
+        InitTransitions();
+        InitFilmStrip();
+        Root.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(Root_PointerMovedAnywhere), handledEventsToo: true);
         Root.ActualThemeChanged += (_, _) =>
         {
             DisposeCheckerboard();
@@ -181,6 +176,7 @@ public sealed partial class MainWindow : Window
         _ambientOn = settings.AmbientLight;
         _checkerboard = settings.Checkerboard;
         _kenBurns = settings.KenBurns;
+        _transition = settings.Transition;
         _wheelAction = settings.WheelAction;
         _slideInterval = TimeSpan.FromSeconds(settings.ClampedSlideSeconds);
         if (_slideTimer is not null)
@@ -336,12 +332,7 @@ public sealed partial class MainWindow : Window
         if (!sameDoc)
         {
             if (_image is not null && image is not null && !Comparing)
-            {
-                _outgoing = (_image, _view, _rotation, _flipH, _flipV);
-                _loader.Previous = _image;   // keep it alive while it slides out
-                _fadeStart = Now;
-                _slideDirection = ViewModel.LastDirection;
-            }
+                BeginTransition();   // keeps the old image alive (ImageLoader.Previous) while it leaves
             _fit = true;
             _rotation = 0;
             _flipH = false;
@@ -403,34 +394,20 @@ public sealed partial class MainWindow : Window
 
         again |= DrawAmbient(ds, now);
 
-        // Navigation transition: outgoing slides away from the direction of travel, incoming slides in.
-        var t = _outgoing is null ? 1 : (now - _fadeStart) / FadeMs;
-        var slide = SlideFraction * vw * _slideDirection;
-        if (_outgoing is { } outgoing)
+        if (_image is { } current)
         {
-            if (t >= 1)
-            {
-                _outgoing = null;
-                _loader.Previous = null;
-            }
-            else
-            {
-                var away = outgoing.View.Pan(-slide * EaseOut(t), 0);
-                DrawImage(ds, outgoing.Image, outgoing.Image.Bitmap, away, outgoing.Rotation, outgoing.FlipH, outgoing.FlipV, (float)(1 - EaseOut(t)));
-                again = true;
-            }
+            var (rw, rh) = RotatedSize(current);
+            again |= StepViewport(now, rw, rh, vw, vh);
         }
+
+        // Navigation transition: the outgoing image is drawn first, the incoming one over it (see Motion.Evaluate).
+        var (view, opacity, moving) = DrawTransition(ds, _image, now, vw, vh);
+        again |= moving;
 
         if (_image is { } image)
         {
-            var (rw, rh) = RotatedSize(image);
-            again |= StepViewport(now, rw, rh, vw, vh);
-
             if (!DrawCompare(ds, image))
-            {
-                var view = _outgoing is null ? _view : _view.Pan(slide * (1 - EaseOut(t)), 0);
-                DrawImage(ds, image, CurrentBitmap(image), view, _rotation, _flipH, _flipV, (float)EaseOut(t));
-            }
+                DrawImage(ds, image, CurrentBitmap(image), view, _rotation, _flipH, _flipV, opacity);
             UpdateZoomText();
             DrawCropOverlay(ds);
             DrawLoupe(ds, sender, image);
@@ -854,6 +831,11 @@ public sealed partial class MainWindow : Window
         if (!ctrl && (point.Properties.IsHorizontalMouseWheel || delta % 120 != 0))
         {
             var d = delta * DpiScale;
+            if (point.Properties.IsHorizontalMouseWheel && SwipeWheel(d))
+            {
+                e.Handled = true;
+                return;
+            }
             if (point.Properties.IsHorizontalMouseWheel)
                 Pan(-d, 0);
             else
@@ -947,7 +929,7 @@ public sealed partial class MainWindow : Window
 
     private void Canvas_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
     {
-        if (e.PointerDeviceType == PointerDeviceType.Mouse || _image is null)
+        if (e.PointerDeviceType == PointerDeviceType.Mouse || _image is null || SwipeManipulation(e))
             return;
         StopMotion();
         _view = _view.Pan(e.Delta.Translation.X * DpiScale, e.Delta.Translation.Y * DpiScale)
@@ -1002,6 +984,7 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Enter when _cropMode: await ShowSaveAsAsync(); break;
             case VirtualKey.Escape when _slideshow: StopSlideshow(); break;
             case VirtualKey.Escape when AppWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen: ToggleFullscreen(); break;
+            case VirtualKey.Escape when _zen: ToggleZen(); break;
             case VirtualKey.Number0 or VirtualKey.NumberPad0 when !ctrl: Fit(); break;
             case VirtualKey.Number1 or VirtualKey.NumberPad1 when !ctrl: ActualSize(Center); break;
             case VirtualKey.Add: ZoomAt(1.25, Center); break;
@@ -1021,6 +1004,7 @@ public sealed partial class MainWindow : Window
             case VirtualKey.F1: ToggleShortcuts(); break;
             case VirtualKey.Delete: await ViewModel.DeleteAsync(); break;
             case VirtualKey.Z when ctrl: await ViewModel.UndoDeleteAsync(); break;
+            case VirtualKey.Z: ToggleZen(); break;
             case VirtualKey.C when ctrl && shift: ViewModel.CopyPath(); break;
             case VirtualKey.C when ctrl: await ViewModel.CopyImageAsync(); break;
             case VirtualKey.O when ctrl: await PickAndOpenAsync(); break;
@@ -1079,7 +1063,7 @@ public sealed partial class MainWindow : Window
     [
         ("←  →", "Sc_Navigate"), ("Home  End", "Sc_FirstLast"), ("[  ]  Alt+←/→", "Sc_Pages"),
         ("+  −", "Sc_Zoom"), ("0  1", "Sc_FitActual"), ("R  ⇧R", "Sc_Rotate"), ("H  V", "Sc_Flip"),
-        ("F  F11", "Sc_Fullscreen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
+        ("F  F11", "Sc_Fullscreen"), ("Z", "Sc_Zen"), ("S", "Sc_Slideshow"), ("B", "Sc_Ambient"),
         ("C", "Sc_Crop"), ("F2", "Sc_Rename"), ("K", "Sc_Compare"), ("L", "Sc_Loupe"), ("Ctrl+S", "Sc_SaveAs"),
         ("I", "Sc_Info"), ("Space  ,  .", "Sc_Animation"), ("Del  Ctrl+Z", "Sc_Delete"),
         ("Ctrl+C  Ctrl+⇧C", "Sc_Copy"), ("Ctrl+V", "Sc_Paste"), ("Ctrl+O  Ctrl+E", "Sc_OpenReveal"),
@@ -1144,21 +1128,12 @@ public sealed partial class MainWindow : Window
     private async void Settings_Click(object sender, RoutedEventArgs e) => await ShowSettingsAsync();
     private void Shortcuts_Tapped(object sender, TappedRoutedEventArgs e) => Shortcuts.Visibility = Visibility.Collapsed;
     private async void Recent_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.OpenAsync(((RecentItem)e.ClickedItem).Path);
-    private async void Film_ItemClick(object sender, ItemClickEventArgs e) => await ViewModel.GoToAsync((FilmItem)e.ClickedItem);
-
-    private void Film_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    private async void Film_ItemClick(object sender, ItemClickEventArgs e)
     {
-        var item = (FilmItem)args.Item;
-        if (args.InRecycleQueue)
-            MainViewModel.UnloadThumbnail(item);
-        else
-            _ = ViewModel.LoadThumbnailAsync(item);
+        var item = (FilmItem)e.ClickedItem;
+        CaptureHero(item);
+        await ViewModel.GoToAsync(item);
     }
-
-    // Thumbnails lift a little under the pointer (ScaleTransition in XAML animates it).
-    private void Thumb_PointerEntered(object sender, PointerRoutedEventArgs e) => ((UIElement)sender).Scale = new Vector3(1.12f, 1.12f, 1);
-
-    private void Thumb_PointerExited(object sender, PointerRoutedEventArgs e) => ((UIElement)sender).Scale = Vector3.One;
 
     // ---------- Drag & drop ----------
 
