@@ -45,6 +45,7 @@
             PointerCaptureLost="Canvas_PointerReleased"
             DragStarting="Canvas_DragStarting"
             ManipulationDelta="Canvas_ManipulationDelta"
+            ManipulationCompleted="Canvas_ManipulationCompleted"
             DoubleTapped="Canvas_DoubleTapped">
             <!-- Right click: the toolbar's file actions plus the Windows hand-offs, with their shortcuts shown. -->
             <canvas:CanvasControl.ContextFlyout>
@@ -79,6 +80,9 @@
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem x:Uid="MenuInfo" KeyboardAcceleratorTextOverride="I" Click="Info_Click">
                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE946;" /></MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem x:Uid="MenuZen" Tag="AlwaysEnabled" KeyboardAcceleratorTextOverride="Z" Click="Zen_Click">
+                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7B3;" /></MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
                     <MenuFlyoutItem x:Uid="MenuSettings" Tag="AlwaysEnabled" KeyboardAcceleratorTextOverride="Ctrl+," Click="Settings_Click" Icon="Setting" />
                     <MenuFlyoutItem x:Uid="MenuDelete" KeyboardAcceleratorTextOverride="Del" Click="Delete_Click" Icon="Delete" />
@@ -147,14 +151,25 @@
                 <ScalarTransition />
             </StackPanel.OpacityTransition>
 
-            <ListView x:Name="FilmStrip" x:Uid="FilmStrip" Height="84" HorizontalAlignment="Center" MaxWidth="1200"
-                      ItemsSource="{x:Bind ViewModel.Film}" SelectedIndex="{x:Bind ViewModel.Index, Mode=OneWay}"
-                      IsItemClickEnabled="True" ItemClick="Film_ItemClick" SelectionMode="Single"
+            <!-- Film strip as a row of cards: the current one large and lit, neighbours shrinking and dimming with distance
+                 (Motion.CardEmphasis, applied in MainWindow.FilmStrip.cs). Selection is drawn by the card, not by ListView. -->
+            <ListView x:Name="FilmStrip" x:Uid="FilmStrip" Height="100" HorizontalAlignment="Center" MaxWidth="1200"
+                      ItemsSource="{x:Bind ViewModel.Film}"
+                      IsItemClickEnabled="True" ItemClick="Film_ItemClick" SelectionMode="None"
                       ContainerContentChanging="Film_ContainerContentChanging"
                       ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                       ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                      CornerRadius="8" Padding="4" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                      CornerRadius="14" Padding="10,0" Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                      BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
                       Visibility="{x:Bind FilmVisibility(ViewModel.Film.Count, ViewModel.ShowFilmStrip), Mode=OneWay}">
+                <ListView.Resources>
+                    <!-- The card draws hover and the current item itself; the stock item backgrounds would fight it. -->
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="Transparent" />
+                </ListView.Resources>
                 <ListView.ItemsPanel>
                     <ItemsPanelTemplate>
                         <ItemsStackPanel Orientation="Horizontal" />
@@ -162,23 +177,43 @@
                 </ListView.ItemsPanel>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
-                        <Setter Property="Padding" Value="2" />
-                        <Setter Property="Margin" Value="2,0" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="3,0" />
                         <Setter Property="MinWidth" Value="0" />
+                        <Setter Property="MinHeight" Value="0" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
                     </Style>
                 </ListView.ItemContainerStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="local:FilmItem">
-                        <Grid Width="96" Height="64" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                              CenterPoint="48,32,0" PointerEntered="Thumb_PointerEntered" PointerExited="Thumb_PointerExited"
+                        <!-- Card: scaled and dimmed by distance from the current image (code), animated by the transitions. -->
+                        <Grid x:Name="Card" Width="88" Height="60" CenterPoint="44,30,0"
                               AutomationProperties.Name="{x:Bind Name}" ToolTipService.ToolTip="{x:Bind Name}">
-                            <Grid.ScaleTransition><Vector3Transition /></Grid.ScaleTransition>
-                            <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                            <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" />
-                            <!-- Prefetched: opens instantly. -->
-                            <Ellipse Width="7" Height="7" Margin="0,0,5,5" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                     Fill="{ThemeResource AccentFillColorDefaultBrush}" Stroke="White" StrokeThickness="1"
-                                     Visibility="{x:Bind IsReady, Mode=OneWay}" />
+                            <Grid.ScaleTransition><Vector3Transition Duration="0:0:0.28" /></Grid.ScaleTransition>
+                            <Grid.OpacityTransition><ScalarTransition Duration="0:0:0.28" /></Grid.OpacityTransition>
+                            <!-- Face: lifts under the pointer. -->
+                            <Grid CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CenterPoint="44,30,0"
+                                  PointerEntered="Thumb_PointerEntered" PointerExited="Thumb_PointerExited">
+                                <Grid.ScaleTransition><Vector3Transition Duration="0:0:0.18" /></Grid.ScaleTransition>
+                                <Grid.TranslationTransition><Vector3Transition Duration="0:0:0.18" /></Grid.TranslationTransition>
+                                <FontIcon Glyph="&#xEB9F;" FontSize="16" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                <!-- Whole photo, never cropped: portrait shots sit on a dimmed, zoomed copy of themselves. -->
+                                <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="UniformToFill" Opacity="{x:Bind BackdropOpacity, Mode=OneWay}">
+                                    <Image.OpacityTransition><ScalarTransition Duration="0:0:0.3" /></Image.OpacityTransition>
+                                </Image>
+                                <Border Background="{ThemeResource SmokeFillColorDefaultBrush}" Opacity="{x:Bind BackdropOpacity, Mode=OneWay}" />
+                                <Image Source="{x:Bind Thumb, Mode=OneWay}" Stretch="Uniform" Opacity="{x:Bind ThumbOpacity, Mode=OneWay}">
+                                    <Image.OpacityTransition><ScalarTransition Duration="0:0:0.3" /></Image.OpacityTransition>
+                                </Image>
+                                <!-- Prefetched: opens instantly. -->
+                                <Ellipse Width="6" Height="6" Margin="0,0,5,5" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                         Fill="{ThemeResource AccentFillColorDefaultBrush}" Stroke="White" StrokeThickness="1"
+                                         Visibility="{x:Bind IsReady, Mode=OneWay}" />
+                                <!-- Current image: accent ring. -->
+                                <Border CornerRadius="8" BorderThickness="2" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                                        Visibility="{x:Bind IsCurrent, Mode=OneWay}" />
+                            </Grid>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -202,7 +237,7 @@
             </Border>
 
             <!-- Responsive toolbar: fixed navigation + zoom readout on the left, dynamically overflowing CommandBar on the right. -->
-            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4,2" CornerRadius="8"
+            <Border x:Name="Toolbar" HorizontalAlignment="Center" Padding="4,2" CornerRadius="14"
                     Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1">
                 <Grid>
@@ -226,58 +261,76 @@
                     </StackPanel>
 
                     <CommandBar x:Name="ActionBar" Grid.Column="1" DefaultLabelPosition="Collapsed"
-                                IsDynamicOverflowEnabled="True" OverflowButtonVisibility="Auto"
+                                IsDynamicOverflowEnabled="True" OverflowButtonVisibility="Visible"
                                 Background="Transparent" VerticalAlignment="Center">
-                        <AppBarButton x:Uid="OpenToolbarButton" DynamicOverflowOrder="1" Icon="OpenFile" Click="Open_Click" />
-                        <AppBarButton x:Uid="ZoomOutButton" DynamicOverflowOrder="1" Icon="ZoomOut" Click="ZoomOut_Click" />
-                        <AppBarButton x:Uid="ZoomInButton" DynamicOverflowOrder="1" Icon="ZoomIn" Click="ZoomIn_Click" />
-                        <AppBarButton x:Uid="FitButton" DynamicOverflowOrder="1" Click="Fit_Click">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
-                        </AppBarButton>
-                        <AppBarSeparator DynamicOverflowOrder="1" />
-                        <AppBarButton x:Uid="RotateButton" DynamicOverflowOrder="1" Icon="Rotate" Click="Rotate_Click" />
-                        <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" DynamicOverflowOrder="1" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
-                        <AppBarButton x:Uid="FlipHButton" DynamicOverflowOrder="3" Click="FlipH_Click">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE8AB;" /></AppBarButton.Icon>
-                        </AppBarButton>
-                        <AppBarButton x:Uid="FlipVButton" DynamicOverflowOrder="3" Click="FlipV_Click">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
-                        </AppBarButton>
-                        <AppBarToggleButton x:Name="CropButton" x:Uid="CropButton" DynamicOverflowOrder="2" Icon="Crop" Click="Crop_Click" />
-                        <AppBarToggleButton x:Name="CompareButton" x:Uid="CompareButton" DynamicOverflowOrder="3" Click="Compare_Click">
-                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarToggleButton.Icon>
-                        </AppBarToggleButton>
-                        <AppBarToggleButton x:Name="LoupeButton" x:Uid="LoupeButton" DynamicOverflowOrder="3" Click="Loupe_Click">
-                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarToggleButton.Icon>
-                        </AppBarToggleButton>
-                        <AppBarButton x:Uid="SaveAsButton" DynamicOverflowOrder="2" Icon="SaveLocal" Click="SaveAs_Click" />
+                        <!-- Visible: the few things people reach for while looking. Everything else lives in "…" and the right-click menu. -->
+                        <AppBarButton x:Uid="RotateButton" DynamicOverflowOrder="2" Icon="Rotate" Click="Rotate_Click" />
+                        <AppBarButton x:Name="SaveRotationButton" x:Uid="SaveRotationButton" DynamicOverflowOrder="2" Icon="Save" Click="SaveRotation_Click" Visibility="Collapsed" />
                         <AppBarButton x:Name="PlayButton" x:Uid="PlayButton" DynamicOverflowOrder="2" Click="Play_Click" Visibility="Collapsed">
                             <AppBarButton.Icon><FontIcon x:Name="PlayIcon" Glyph="&#xE769;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarButton x:Uid="SlideshowButton" DynamicOverflowOrder="2" Click="Slideshow_Click">
+                        <AppBarButton x:Uid="SlideshowButton" DynamicOverflowOrder="1" Click="Slideshow_Click">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE786;" /></AppBarButton.Icon>
                         </AppBarButton>
-                        <AppBarSeparator DynamicOverflowOrder="2" />
-                        <AppBarButton x:Uid="DeleteButton" DynamicOverflowOrder="1" Icon="Delete" Click="Delete_Click" />
                         <AppBarToggleButton x:Name="InfoButton" x:Uid="InfoButton" DynamicOverflowOrder="1" Click="Info_Click">
                             <AppBarToggleButton.Icon><FontIcon Glyph="&#xE946;" /></AppBarToggleButton.Icon>
                         </AppBarToggleButton>
+                        <AppBarToggleButton x:Name="ZenButton" x:Uid="ZenButton" DynamicOverflowOrder="1" Click="Zen_Click">
+                            <AppBarToggleButton.Icon><FontIcon Glyph="&#xE7B3;" /></AppBarToggleButton.Icon>
+                        </AppBarToggleButton>
                         <AppBarButton x:Uid="FullscreenButton" DynamicOverflowOrder="1" Icon="FullScreen" Click="Fullscreen_Click" />
-                        <AppBarButton x:Uid="SettingsButton" DynamicOverflowOrder="2" Icon="Setting" Click="Settings_Click" />
+
+                        <CommandBar.SecondaryCommands>
+                            <AppBarButton x:Uid="OpenToolbarButton" Icon="OpenFile" Click="Open_Click" />
+                            <AppBarButton x:Uid="SaveAsButton" Icon="SaveLocal" Click="SaveAs_Click" />
+                            <AppBarSeparator />
+                            <AppBarButton x:Uid="ZoomInButton" Icon="ZoomIn" Click="ZoomIn_Click" />
+                            <AppBarButton x:Uid="ZoomOutButton" Icon="ZoomOut" Click="ZoomOut_Click" />
+                            <AppBarButton x:Uid="FitButton" Click="Fit_Click">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE9A6;" /></AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarSeparator />
+                            <AppBarButton x:Uid="FlipHButton" Click="FlipH_Click">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE8AB;" /></AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton x:Uid="FlipVButton" Click="FlipV_Click">
+                                <AppBarButton.Icon><FontIcon Glyph="&#xE8CB;" /></AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarToggleButton x:Name="CropButton" x:Uid="CropButton" Icon="Crop" Click="Crop_Click" />
+                            <AppBarToggleButton x:Name="CompareButton" x:Uid="CompareButton" Click="Compare_Click">
+                                <AppBarToggleButton.Icon><FontIcon Glyph="&#xE89F;" /></AppBarToggleButton.Icon>
+                            </AppBarToggleButton>
+                            <AppBarToggleButton x:Name="LoupeButton" x:Uid="LoupeButton" Click="Loupe_Click">
+                                <AppBarToggleButton.Icon><FontIcon Glyph="&#xEF3C;" /></AppBarToggleButton.Icon>
+                            </AppBarToggleButton>
+                            <AppBarSeparator />
+                            <AppBarButton x:Uid="DeleteButton" Icon="Delete" Click="Delete_Click" />
+                            <AppBarButton x:Uid="SettingsButton" Icon="Setting" Click="Settings_Click" />
+                        </CommandBar.SecondaryCommands>
                     </CommandBar>
                 </Grid>
             </Border>
         </StackPanel>
 
-        <!-- Undo toast for delete. -->
-        <Border x:Name="UndoToast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,48,0,0" Padding="16,8,8,8" CornerRadius="8"
-                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
-                Visibility="{x:Bind HasText(ViewModel.UndoMessage), Mode=OneWay, FallbackValue=Collapsed}">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.UndoMessage, Mode=OneWay}" />
-                <Button x:Uid="UndoButton" Click="Undo_Click" />
-            </StackPanel>
-        </Border>
+        <!-- Toasts: one stack under the title bar, one look (undo for delete, notices such as "Saved: x.jpg"). -->
+        <StackPanel Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,48,0,0" Spacing="8">
+            <Border x:Name="UndoToast" HorizontalAlignment="Center" Padding="16,8,8,8" CornerRadius="12"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{x:Bind HasText(ViewModel.UndoMessage), Mode=OneWay, FallbackValue=Collapsed}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.UndoMessage, Mode=OneWay}" />
+                    <Button x:Uid="UndoButton" Click="Undo_Click" />
+                </StackPanel>
+            </Border>
+            <Border x:Name="NoticeToast" HorizontalAlignment="Center" Padding="12,8,16,8" CornerRadius="12"
+                    Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{x:Bind HasText(ViewModel.Notice), Mode=OneWay, FallbackValue=Collapsed}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <FontIcon Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <!-- Info card (I), floating over the image: histogram, colour theme, camera & exposure, date, location, file. -->
         <Grid x:Name="InfoPanel" Grid.ColumnSpan="2" Width="320" Visibility="Collapsed"
@@ -468,16 +521,6 @@
                 <ComboBox x:Name="CropAspectBox" x:Uid="CropAspectBox" MinWidth="112" SelectionChanged="CropAspectBox_SelectionChanged" />
                 <Button x:Uid="CropSaveButton" Style="{StaticResource AccentButtonStyle}" Click="SaveAs_Click" />
                 <Button x:Uid="CropCancelButton" Click="CropCancel_Click" />
-            </StackPanel>
-        </Border>
-
-        <!-- Notices ("Saved: x.jpg"). -->
-        <Border x:Name="NoticeToast" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,96,0,0" Padding="12,8,16,8" CornerRadius="8"
-                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1"
-                Visibility="{x:Bind HasText(ViewModel.Notice), Mode=OneWay, FallbackValue=Collapsed}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <FontIcon Glyph="&#xE946;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="{x:Bind ViewModel.Notice, Mode=OneWay}" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 

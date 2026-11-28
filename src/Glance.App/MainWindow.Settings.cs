@@ -51,6 +51,21 @@ public sealed partial class MainWindow
         };
         var kenBurnsToggle = new ToggleSwitch { Header = Strings.Get("Settings_KenBurns"), IsOn = current.KenBurns };
 
+        var transitionBox = new ComboBox
+        {
+            Header = Strings.Get("Settings_Transition"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ItemsSource = new[]   // order = TransitionKind
+            {
+                Strings.Get("Settings_TransitionSlide"),
+                Strings.Get("Settings_TransitionCrossfade"),
+                Strings.Get("Settings_TransitionZoom"),
+                Strings.Get("Settings_TransitionParallax"),
+                Strings.Get("Settings_TransitionNone"),
+            },
+            SelectedIndex = Math.Clamp((int)current.Transition, 0, 4),
+        };
+
         var sortBox = new ComboBox
         {
             Header = Strings.Get("Settings_SortBy"),
@@ -76,6 +91,7 @@ public sealed partial class MainWindow
                 Checkerboard = checkerToggle.IsOn,
                 SlideSeconds = double.IsNaN(slideSeconds.Value) ? 4 : Math.Clamp((int)Math.Round(slideSeconds.Value), 1, 30),
                 KenBurns = kenBurnsToggle.IsOn,
+                Transition = (TransitionKind)Math.Clamp(transitionBox.SelectedIndex, 0, 4),
                 SortBy = (SortBy)Math.Clamp(sortBox.SelectedIndex, 0, 2),
                 SortDescending = sortDesc.IsChecked == true,
             };
@@ -92,6 +108,7 @@ public sealed partial class MainWindow
         checkerToggle.Toggled += (_, _) => Commit();
         slideSeconds.ValueChanged += (_, _) => Commit();
         kenBurnsToggle.Toggled += (_, _) => Commit();
+        transitionBox.SelectionChanged += (_, _) => Commit();
         sortBox.SelectionChanged += (_, _) => Commit();
         sortDesc.Checked += (_, _) => Commit();
         sortDesc.Unchecked += (_, _) => Commit();
@@ -125,6 +142,7 @@ public sealed partial class MainWindow
                 ambientToggle,
                 filmToggle,
                 checkerToggle,
+                transitionBox,
                 slideSeconds,
                 kenBurnsToggle,
                 sortBox,

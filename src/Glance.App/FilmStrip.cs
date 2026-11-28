@@ -16,6 +16,21 @@ public sealed partial class FilmItem(string path) : ObservableObject
 
     [ObservableProperty] public partial ImageSource? Thumb { get; set; }
 
+    /// <summary>The image on screen: the card shows an accent ring.</summary>
+    [ObservableProperty] public partial bool IsCurrent { get; set; }
+
+    /// <summary>Thumbnails fade in (OpacityTransition in XAML) instead of popping in.</summary>
+    public double ThumbOpacity => Thumb is null ? 0 : 1;
+
+    /// <summary>The dimmed, zoomed copy behind the whole photo.</summary>
+    public double BackdropOpacity => Thumb is null ? 0 : 0.45;
+
+    partial void OnThumbChanged(ImageSource? value)
+    {
+        OnPropertyChanged(nameof(ThumbOpacity));
+        OnPropertyChanged(nameof(BackdropOpacity));
+    }
+
     /// <summary>Decoded and on the GPU: opens instantly. Shown as a small dot in the strip.</summary>
     [ObservableProperty] public partial bool IsReady { get; set; }
 
@@ -50,20 +65,41 @@ public sealed partial class MainViewModel
 
     public bool HasRecent => Recent.Count > 0;
 
+    private FilmItem? _currentCard;
+
     private void RefreshFilm()
     {
         var files = _nav.Snapshot();
         if (files.Length == Film.Count && files.Zip(Film).All(p => p.First == p.Second.Path))
             return;
-        var keep = Film.ToDictionary(f => f.Path);
-        Film.Clear();
-        _filmByPath.Clear();
-        foreach (var path in files)
+        FilmItem Create(string path) => new(path) { IsReady = _loader.IsCached(path) };
+        // A file added, removed or renamed is a few edits: the strip keeps its scroll position and animates the change.
+        // A re-sort or another folder rebuilds, which is cheaper than thousands of moves.
+        if (!CollectionSync.TrySync(Film, files, f => f.Path, Create, StringComparer.Ordinal))
         {
-            var item = keep.GetValueOrDefault(path) ?? new FilmItem(path) { IsReady = _loader.IsCached(path) };
-            Film.Add(item);
-            _filmByPath[path] = item;
+            var keep = Film.ToDictionary(f => f.Path);
+            Film.Clear();
+            foreach (var path in files)
+                Film.Add(keep.GetValueOrDefault(path) ?? Create(path));
         }
+        _filmByPath.Clear();
+        foreach (var item in Film)
+            _filmByPath[item.Path] = item;
+        UpdateCurrentCard();
+    }
+
+    partial void OnIndexChanged(int value) => UpdateCurrentCard();
+
+    private void UpdateCurrentCard()
+    {
+        var item = CurrentPath is { } path ? _filmByPath.GetValueOrDefault(path) : null;
+        if (ReferenceEquals(item, _currentCard))
+            return;
+        if (_currentCard is not null)
+            _currentCard.IsCurrent = false;
+        _currentCard = item;
+        if (item is not null)
+            item.IsCurrent = true;
     }
 
     public async Task GoToAsync(FilmItem item)

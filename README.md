@@ -30,8 +30,9 @@
 | | |
 |---|---|
 | **Viewing** | Zoom around the cursor, pan with momentum, fit / 100 % toggle, rotate, flip (**H** / **V**), transparency checkerboard, full screen, touch and touchpad gestures |
-| **Browsing** | Folder navigation sorted by name, date or size, filmstrip with thumbnails, drag & drop, clipboard paste (**Ctrl+V**), recent files, multi-page PDF & TIFF navigation, single window |
-| **Looks** | Mica / Acrylic backdrop, ambient light that picks up the photo's colours, slide transitions, system / light / dark theme, responsive toolbar |
+| **Browsing** | Folder navigation sorted by name, date or size, card filmstrip that keeps the current photo centred, swipe with a finger or two touchpad fingers, drag & drop, clipboard paste (**Ctrl+V**), recent files, multi-page PDF & TIFF navigation, single window |
+| **Looks** | Mica / Acrylic backdrop, ambient light that picks up the photo's colours, spring-driven transitions (slide, cross-fade, zoom, parallax — pick one in Settings; Windows "animation effects" off is respected), film strip cards that grow into the full image, system / light / dark theme, responsive toolbar |
+| **Zen mode** | No window frame, title bar or buttons — just the photo. Controls appear only at the bottom edge (**Z**) |
 | **Slideshow** | Full screen with configurable interval and optional Ken Burns drift (**S**) |
 | **Info panel** | Live RGB histogram, camera, lens, exposure (f-number · shutter · ISO · focal length), date taken, GPS location (**I**) |
 | **Editing** | Lossless JPEG rotation, interactive crop with handles & aspect ratios (**C**), rename (**F2**), save as JPEG / PNG / WebP / AVIF / JPEG XL / TIFF / BMP with quality and resize (**Ctrl+S**). Originals are never overwritten silently: in-place saves move the original to the Recycle Bin first |
@@ -70,6 +71,7 @@ Press **?** in the app to see them all.
 | 0 · 1 · double-click | Fit to window · actual size · toggle |
 | R · Shift+R · H · V | Rotate right / left · flip horizontal / vertical |
 | F · F11 · Esc | Full screen / leave |
+| Z | Zen mode |
 | S | Slideshow |
 | B | Ambient light on / off |
 | I | Info panel |

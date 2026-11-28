@@ -200,4 +200,15 @@
   <data name="Settings_RegisterDefaults" xml:space="preserve"><value>Set default apps…</value></data>
   <data name="Settings_Unregister" xml:space="preserve"><value>Remove registration</value></data>
   <data name="Settings_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="ZenButton.Label" xml:space="preserve"><value>Zen mode (Z)</value></data>
+  <data name="ZenButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Zen mode (Z)</value></data>
+  <data name="MenuZen.Text" xml:space="preserve"><value>Zen mode</value></data>
+  <data name="Sc_Zen" xml:space="preserve"><value>Zen mode: no window frame, controls only at the edges</value></data>
+  <data name="Notice_ZenOn" xml:space="preserve"><value>Zen mode: controls appear at the bottom edge. Z or Esc to leave, ? for shortcuts</value></data>
+  <data name="Settings_Transition" xml:space="preserve"><value>Transition between images</value></data>
+  <data name="Settings_TransitionSlide" xml:space="preserve"><value>Slide</value></data>
+  <data name="Settings_TransitionCrossfade" xml:space="preserve"><value>Cross-fade</value></data>
+  <data name="Settings_TransitionZoom" xml:space="preserve"><value>Zoom</value></data>
+  <data name="Settings_TransitionParallax" xml:space="preserve"><value>Parallax (slides over)</value></data>
+  <data name="Settings_TransitionNone" xml:space="preserve"><value>None</value></data>
 </root>
